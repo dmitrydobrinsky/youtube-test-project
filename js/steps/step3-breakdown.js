@@ -32,11 +32,20 @@ function missionBlock(mission) {
   const color = store.getState().settings.missionColors[mission.id] || '#6366f1';
   const initiatives = store.getInitiativesByMission(mission.id);
   const total = missionEffort(mission.id);
+  const team = store.getTeam();
+  const ownerOpts = [{ id: '', name: '—' }, ...team]
+    .map(m => `<option value="${m.id}" ${mission.ownerId === m.id ? 'selected' : ''}>${esc(m.name || '—')}</option>`)
+    .join('');
   return `
     <div class="mission-block" data-mission-id="${mission.id}">
       <div class="mission-header" style="border-left:4px solid ${color}">
         <span class="mission-title">${esc(mission.title)}</span>
-        ${total ? `<span style="font-size:.78rem;color:var(--text-muted);margin-left:auto;margin-right:.75rem">${total} days total</span>` : ''}
+        <label style="display:flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--text-muted);margin-left:.75rem">
+          Owner:
+          <select class="tbl-input tbl-select mission-owner-select" data-mission-id="${mission.id}" style="font-size:.78rem;padding:.25rem .5rem">${ownerOpts}</select>
+        </label>
+        <div style="flex:1"></div>
+        ${total ? `<span class="mission-total-label" style="font-size:.78rem;color:var(--text-muted);margin-right:.75rem">${total} days total</span>` : '<span class="mission-total-label" style="font-size:.78rem;color:var(--text-muted);margin-right:.75rem"></span>'}
         <button class="btn btn-sm btn-primary add-init-btn" data-mission="${mission.id}">+ Add Task</button>
       </div>
       <div class="initiatives-list" id="inits-${mission.id}">
@@ -47,10 +56,6 @@ function missionBlock(mission) {
 }
 
 function initiativeRow(init) {
-  const team = store.getTeam();
-  const ownerOpts = [{ id: '', name: '—' }, ...team]
-    .map(m => `<option value="${m.id}" ${init.ownerId === m.id ? 'selected' : ''}>${esc(m.name || '—')}</option>`)
-    .join('');
   const targetOpts = TARGETS.map(t =>
     `<option value="${t}" ${init.target === t ? 'selected' : ''}>${t}</option>`
   ).join('');
@@ -80,9 +85,6 @@ function initiativeRow(init) {
         </div>
 
         <div class="init-meta">
-          <label>Owner:
-            <select class="tbl-input tbl-select init-field" data-field="ownerId">${ownerOpts}</select>
-          </label>
           <label>Target:
             <select class="tbl-input tbl-select init-field" data-field="target">${targetOpts}</select>
           </label>
@@ -98,6 +100,13 @@ function initiativeRow(init) {
 
 function bindEvents() {
   const container = document.getElementById('breakdown-missions');
+
+  // Mission owner
+  container.querySelectorAll('.mission-owner-select').forEach(sel => {
+    sel.addEventListener('change', e => {
+      store.updateMission(e.target.dataset.missionId, { ownerId: e.target.value });
+    });
+  });
 
   // Add task
   container.querySelectorAll('.add-init-btn').forEach(btn => {

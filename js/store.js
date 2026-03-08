@@ -89,6 +89,7 @@ function addMission(data = {}) {
     title: data.title || '',
     description: data.description || '',
     owner: data.owner || '',
+    ownerId: data.ownerId || '',
     priority: data.priority || ''
   };
   state.missions.push(m);
