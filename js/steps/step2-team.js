@@ -68,12 +68,12 @@ function memberRow(m) {
         <div class="pd-tooltip-wrap" style="font-size:.7rem;color:var(--text-muted);margin-top:.15rem">
           ${m.workingDays}d
           ${m.holidayDays  ? `<span style="color:var(--yellow)"> − ${m.holidayDays} holidays</span>` : ''}
-          ${m.vacationDays ? `<span style="color:var(--red)"> − ${m.vacationDays} vacation</span>` : ''}
+          ${m.vacationDays ? `<span style="color:var(--red)"> − ${m.vacationDays} out of office</span>` : ''}
           ${m.reserveDays  ? `<span style="color:var(--accent)"> − ${m.reserveDays} reserve</span>` : ''}
           <div class="pd-tooltip">
             <div class="pd-tooltip-row"><span>Working days</span><span>${m.workingDays + (m.holidayDays || 0)}d</span></div>
             ${m.holidayDays  ? `<div class="pd-tooltip-row pd-holiday"><span>− Public holidays</span><span>${m.holidayDays}d</span></div>` : ''}
-            ${m.vacationDays ? `<div class="pd-tooltip-row pd-vacation"><span>− Vacation</span><span>${m.vacationDays}d</span></div>` : ''}
+            ${m.vacationDays ? `<div class="pd-tooltip-row pd-vacation"><span>− Out of office</span><span>${m.vacationDays}d</span></div>` : ''}
             ${m.reserveDays  ? `<div class="pd-tooltip-row pd-reserve"><span>− Reserve duty</span><span>${m.reserveDays}d</span></div>` : ''}
             <div class="pd-tooltip-divider"></div>
             <div class="pd-tooltip-row pd-net"><span>Net available</span><span>${m.workingDays}d</span></div>
