@@ -100,7 +100,10 @@ function initiativeRow(init) {
         </div>
         <textarea class="tbl-input init-notes" data-field="notes" placeholder="Notes…" rows="2">${esc(init.notes)}</textarea>
       </div>
-      <button class="icon-btn del-btn" title="Delete">🗑</button>
+      <div style="display:flex;flex-direction:column;gap:.3rem">
+        <button class="icon-btn clone-btn" title="Clone task">⧉</button>
+        <button class="icon-btn del-btn" title="Delete">🗑</button>
+      </div>
     </div>`;
 }
 
@@ -194,6 +197,25 @@ function bindEvents() {
       let val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
       store.updateInitiative(id, { [field]: val });
       if (field === 'isStretch') { row.classList.toggle('stretch', val); renderGauge(); }
+    });
+  });
+
+  // Clone
+  container.querySelectorAll('.clone-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const row = e.target.closest('[data-init-id]');
+      const id = row.dataset.initId;
+      const src = store.getInitiatives().find(x => x.id === id);
+      if (!src) return;
+      store.addInitiative({
+        missionId:   src.missionId,
+        title:       src.title + ' (copy)',
+        roleEfforts: { ...src.roleEfforts },
+        target:      src.target,
+        notes:       src.notes,
+        isStretch:   src.isStretch
+      });
+      render();
     });
   });
 
