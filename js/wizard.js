@@ -6,7 +6,6 @@ const TOTAL_STEPS = 6;
 const STEP_NAMES = ['Wish List', 'Team Setup', 'Breakdown', 'Prioritize', 'Timeline', 'Export'];
 
 let currentStep = 1;
-let maxReachedStep = 1;
 const guards = {}; // stepNumber -> () => bool
 
 export function registerGuard(step, fn) {
@@ -15,7 +14,6 @@ export function registerGuard(step, fn) {
 
 export function init() {
   currentStep = store.getState().meta.currentStep || 1;
-  maxReachedStep = currentStep;
   _render();
 
   document.getElementById('btn-next').addEventListener('click', () => {
@@ -35,7 +33,6 @@ export function goTo(n) {
     }
   }
   currentStep = n;
-  if (n > maxReachedStep) maxReachedStep = n;
   store.setCurrentStep(n);
   _render();
 }
@@ -61,7 +58,6 @@ function _render() {
     tab.classList.toggle('done', n < currentStep);
     tab.classList.toggle('active', n === currentStep);
     tab.classList.toggle('future', n > currentStep);
-    tab.style.cursor = n <= maxReachedStep ? 'pointer' : 'default';
   });
 
   // Buttons
@@ -84,12 +80,12 @@ function _render() {
   document.dispatchEvent(new CustomEvent('stepchange', { detail: { step: currentStep } }));
 }
 
-// Allow clicking tabs to navigate to any already-reached step
+// Allow clicking tabs to navigate back
 export function bindTabClicks() {
   document.querySelectorAll('.wiz-tab').forEach(tab => {
     tab.addEventListener('click', () => {
       const n = parseInt(tab.dataset.step, 10);
-      if (n <= maxReachedStep) goTo(n);
+      if (n < currentStep) goTo(n);
     });
   });
 }
