@@ -44,7 +44,6 @@ export async function fetchEmployees(accessToken) {
             lastName
             email
             workStatus
-            profilePicture
             employeeFieldValues {
               textValue
               fieldValue
@@ -113,6 +112,20 @@ function normaliseEmployee(emp, idToName = {}) {
   const team     = getText('team');
   const country  = getText('country');
 
+  // Profile picture is stored as a protected asset ID in employeeFieldValues
+  const picField = getRaw('employee_profile_picture');
+  let profilePicture = null;
+  if (picField) {
+    const v = picField.fieldValue;
+    const assetId = (typeof v === 'number' || typeof v === 'string') ? String(v)
+      : Array.isArray(v) ? String(v[0])
+      : (typeof v === 'object' && v !== null) ? String(Object.values(v)[0])
+      : null;
+    if (assetId && assetId !== 'null') {
+      profilePicture = `/api/shapes-asset/${assetId}?preview=false`;
+    }
+  }
+
   return {
     name:           `${emp.firstName} ${emp.lastName}`.trim(),
     email:          emp.email || '',
@@ -122,7 +135,7 @@ function normaliseEmployee(emp, idToName = {}) {
     role:           inferRole(jobTitle, team),
     workStatus:     emp.workStatus || 'active',
     shapesId:       emp.id,
-    profilePicture: proxyAssetUrl(emp.profilePicture),
+    profilePicture,
     managerId,
     managerName
   };
@@ -201,14 +214,6 @@ export async function fetchTimeAway(accessToken, employeeIds, startDate, endDate
   return { bookings, reasonCategory };
 }
 
-// Convert a Shapes protected-asset URL to the local proxy path
-// e.g. https://api.shapes.co/protected-assets/47958?preview=false
-//   → /api/shapes-asset/47958?preview=false
-function proxyAssetUrl(url) {
-  if (!url) return null;
-  const m = url.match(/protected-assets\/(.+)/);
-  return m ? `/api/shapes-asset/${m[1]}` : null;
-}
 
 function inferRole(jobTitle, team) {
   const s = `${jobTitle} ${team}`.toLowerCase();
