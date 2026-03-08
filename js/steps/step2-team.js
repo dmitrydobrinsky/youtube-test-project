@@ -602,45 +602,54 @@ function openMemberDetail(memberId) {
   });
 }
 
+function isIsrael(country) {
+  return /^(israel|il)$/i.test((country || '').trim());
+}
+
 function buildCalendar(m, range) {
   const startISO = range.start.toISOString().slice(0, 10);
   const endISO   = range.end.toISOString().slice(0, 10);
   const daysOff  = new Set(m.daysOff || []);
 
-  // Group weekdays by month
+  // Israel: Sun–Thu (0–4); standard: Mon–Fri (1–5)
+  const il         = isIsrael(m.country);
+  const workDays   = il ? new Set([0,1,2,3,4]) : new Set([1,2,3,4,5]);
+  const weekStart  = il ? 0 : 1;   // 0=Sun, 1=Mon
+  const weekEnd    = il ? 4 : 5;   // 4=Thu, 5=Fri
+  const DAY_NAMES  = il ? ['Su','Mo','Tu','We','Th'] : ['Mo','Tu','We','Th','Fr'];
+
+  // Group working days by month
   const months = {};
   const cur = new Date(startISO + 'T00:00:00Z');
   const last = new Date(endISO  + 'T00:00:00Z');
 
   while (cur <= last) {
     const dow = cur.getUTCDay();
-    if (dow !== 0 && dow !== 6) {
+    if (workDays.has(dow)) {
       const iso = cur.toISOString().slice(0, 10);
-      const key = iso.slice(0, 7); // YYYY-MM
+      const key = iso.slice(0, 7);
       if (!months[key]) months[key] = [];
       months[key].push(iso);
     }
     cur.setUTCDate(cur.getUTCDate() + 1);
   }
 
-  const DAY_NAMES = ['Mo','Tu','We','Th','Fr'];
-
   const monthBlocks = Object.entries(months).map(([ym, days]) => {
     const [y, mo] = ym.split('-');
     const label = new Date(Date.UTC(+y, +mo - 1, 1))
       .toLocaleString('default', { month: 'long', year: 'numeric' });
 
-    // Build week rows
+    // Build week rows — pad first row relative to weekStart
     const weeks = [];
     let week = [];
     days.forEach(iso => {
-      const dow = new Date(iso + 'T00:00:00Z').getUTCDay(); // 1=Mon..5=Fri
+      const dow = new Date(iso + 'T00:00:00Z').getUTCDay();
       if (week.length === 0) {
-        // pad start
-        for (let d = 1; d < dow; d++) week.push(null);
+        const offset = (dow - weekStart + 7) % 7;
+        for (let i = 0; i < offset; i++) week.push(null);
       }
       week.push(iso);
-      if (dow === 5) { weeks.push(week); week = []; }
+      if (dow === weekEnd) { weeks.push(week); week = []; }
     });
     if (week.length) weeks.push(week);
 
