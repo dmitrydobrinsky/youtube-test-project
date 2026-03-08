@@ -3,7 +3,7 @@
 import * as store from './store.js';
 
 const TOTAL_STEPS = 6;
-const STEP_NAMES = ['Wish List', 'Team Setup', 'Breakdown', 'Prioritize', 'Timeline', 'Export'];
+const STEP_NAMES = ['Team Setup', 'Wish List', 'Breakdown', 'Prioritize', 'Timeline', 'Export'];
 
 let currentStep = 1;
 const guards = {}; // stepNumber -> () => bool

@@ -21,8 +21,8 @@
 <header id="app-header">
   <h1>📅 <span class="logo-text">Quarter Planner</span> <span id="quarter-label"></span></h1>
   <nav class="wiz-tabs">
-    <div class="wiz-tab active" data-step="1">1 · Wish List</div>
-    <div class="wiz-tab future" data-step="2">2 · Team</div>
+    <div class="wiz-tab active" data-step="1">1 · Team</div>
+    <div class="wiz-tab future" data-step="2">2 · Wish List</div>
     <div class="wiz-tab future" data-step="3">3 · Breakdown</div>
     <div class="wiz-tab future" data-step="4">4 · Prioritize</div>
     <div class="wiz-tab future" data-step="5">5 · Timeline</div>
@@ -33,8 +33,43 @@
 <!-- ══ Main ════════════════════════════════════════════════════════════ -->
 <main id="app-main">
 
-  <!-- ── Step 1: Wish List ───────────────────────────────────────────── -->
+  <!-- ── Step 1: Team Setup ─────────────────────────────────────────── -->
   <section id="step-1" class="step-panel active">
+    <h2 class="step-title">Team Setup</h2>
+    <p class="step-desc">Define who is working this quarter and their available capacity.</p>
+
+    <div class="toolbar">
+      <button class="btn btn-ghost" id="team-shapes-btn">⬇ Import from Shapes.co</button>
+      <button class="btn btn-ghost" id="team-sync-days-btn" title="Recalculate available days using public holidays and planned vacations">📅 Sync Holidays & Vacations</button>
+      <button class="btn btn-primary" id="team-add-btn">+ Add Member</button>
+      <button class="btn btn-danger" id="team-clear-btn">🗑 Clear All</button>
+    </div>
+
+    <div style="margin-bottom:.75rem">
+      <input id="team-search" class="form-input" placeholder="🔍 Filter by name…" style="max-width:280px">
+    </div>
+
+    <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Capacity</th>
+            <th>Available Weeks</th>
+            <th>Person-Days</th>
+            <th style="width:40px"></th>
+          </tr>
+        </thead>
+        <tbody id="team-tbody"></tbody>
+      </table>
+    </div>
+
+    <p style="margin-top:.75rem;color:var(--text-muted);font-size:.8rem" id="team-total"></p>
+  </section>
+
+  <!-- ── Step 2: Wish List ───────────────────────────────────────────── -->
+  <section id="step-2" class="step-panel">
     <h2 class="step-title">Wish List</h2>
     <p class="step-desc">Collect missions from the Product Manager. Upload a file or add rows manually.</p>
 
@@ -72,41 +107,6 @@
       </table>
     </div>
     <p style="margin-top:.75rem;color:var(--text-muted);font-size:.8rem" id="wl-count">0 mission(s)</p>
-  </section>
-
-  <!-- ── Step 2: Team Setup ──────────────────────────────────────────── -->
-  <section id="step-2" class="step-panel">
-    <h2 class="step-title">Team Setup</h2>
-    <p class="step-desc">Define who is working this quarter and their available capacity.</p>
-
-    <div class="toolbar">
-      <button class="btn btn-ghost" id="team-shapes-btn">⬇ Import from Shapes.co</button>
-      <button class="btn btn-ghost" id="team-sync-days-btn" title="Recalculate available days using public holidays and planned vacations">📅 Sync Holidays & Vacations</button>
-      <button class="btn btn-primary" id="team-add-btn">+ Add Member</button>
-      <button class="btn btn-danger" id="team-clear-btn">🗑 Clear All</button>
-    </div>
-
-    <div style="margin-bottom:.75rem">
-      <input id="team-search" class="form-input" placeholder="🔍 Filter by name…" style="max-width:280px">
-    </div>
-
-    <div style="overflow-x:auto">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Role</th>
-            <th>Capacity</th>
-            <th>Available Weeks</th>
-            <th>Person-Days</th>
-            <th style="width:40px"></th>
-          </tr>
-        </thead>
-        <tbody id="team-tbody"></tbody>
-      </table>
-    </div>
-
-    <p style="margin-top:.75rem;color:var(--text-muted);font-size:.8rem" id="team-total"></p>
   </section>
 
   <!-- ── Step 3: Breakdown ───────────────────────────────────────────── -->

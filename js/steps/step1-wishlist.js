@@ -10,7 +10,7 @@ import * as modal from '../components/modal.js';
 const PRIORITIES = ['', 'High', 'Medium', 'Low'];
 
 export function init() {
-  wizard.registerGuard(1, () => store.getMissions().length > 0);
+  wizard.registerGuard(2, () => store.getMissions().length > 0);
   render();
   bindEvents();
 }
@@ -123,7 +123,7 @@ function bindEvents() {
 
   // Re-render on step change
   document.addEventListener('stepchange', e => {
-    if (e.detail.step === 1) render();
+    if (e.detail.step === 2) render();
   });
 }
 
