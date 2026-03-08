@@ -493,56 +493,6 @@ tr:hover .drag-handle { opacity: 1; }
 
 .empty-hint { color: var(--text-muted); font-size: .85rem; padding: .5rem .25rem; font-style: italic; }
 
-/* ── Person-days breakdown tooltip ──────────────────────────── */
-.pd-tooltip-wrap {
-  position: relative;
-  display: inline-block;
-}
-.pd-tooltip {
-  display: none;
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow);
-  padding: .65rem .85rem;
-  min-width: 210px;
-  z-index: 200;
-  font-size: .78rem;
-  white-space: nowrap;
-}
-.pd-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: var(--border);
-}
-.pd-tooltip-wrap:hover .pd-tooltip { display: block; }
-.pd-tooltip-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 1.5rem;
-  padding: .18rem 0;
-  color: var(--text-soft);
-}
-.pd-tooltip-row span:last-child { font-weight: 600; }
-.pd-deduct span:first-child { color: var(--text-muted); }
-.pd-deduct span:last-child  { color: var(--red); }
-.pd-vacation span:last-child { color: var(--yellow); }
-.pd-reserve  span:last-child { color: var(--accent); }
-.pd-net span  { color: var(--text); }
-.pd-total span { color: var(--accent); font-weight: 700; }
-.pd-tooltip-divider {
-  border-top: 1px solid var(--border);
-  margin: .35rem 0;
-}
-
 /* ── Per-role capacity gauge ─────────────────────────────────── */
 .role-gauge-grid {
   display: flex;
