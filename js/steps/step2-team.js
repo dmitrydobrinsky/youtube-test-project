@@ -558,9 +558,13 @@ function openMemberDetail(memberId) {
       ${buildWeekdayPicker(m)}
 
       <label class="form-label" style="margin-top:1rem">National Holidays</label>
-      <input id="detail-holidays" class="form-input" type="number" min="0"
-        style="width:100px;margin-bottom:1.25rem"
-        placeholder="0" value="${m.holidayDays ?? ''}">
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1.25rem">
+        <input id="detail-holidays" class="form-input" type="number" min="0"
+          style="width:100px"
+          placeholder="0" value="${m.holidayDays ?? ''}">
+        <button type="button" class="btn btn-ghost btn-sm" id="detail-holidays-copy"
+          title="Copy to all members from the same country">Apply to all (${esc(m.country || 'same country')})</button>
+      </div>
 
       <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:1.25rem">
         <button class="btn btn-ghost" id="detail-cancel">Cancel</button>
@@ -583,6 +587,30 @@ function openMemberDetail(memberId) {
     if (!pill) return;
     pill.classList.toggle('active');
     _updateWeekdaySummary();
+  });
+
+  document.getElementById('detail-holidays-copy').addEventListener('click', () => {
+    const days    = Math.max(0, parseInt(document.getElementById('detail-holidays').value) || 0);
+    const country = document.getElementById('detail-country').value.trim().toLowerCase();
+    const range   = quarterToDateRange(store.getState().meta.quarterLabel);
+    store.getTeam()
+      .filter(t => t.id !== memberId && (t.country || '').trim().toLowerCase() === country)
+      .forEach(t => {
+        const patch = { holidayDays: days };
+        if (range) {
+          const workSet = new Set(t.weekDays ?? defaultWeekDays(t.country));
+          const total   = countWorkingDays(range.start, range.end, workSet);
+          const net     = Math.max(0, total - days - (t.vacationDays || 0) - (t.reserveDays || 0));
+          Object.assign(patch, {
+            workingDays:    total - days,
+            personDays:     Math.round(net * t.capacityPct / 100),
+            availableWeeks: parseFloat((net / 5).toFixed(1))
+          });
+        }
+        store.updateTeamMember(t.id, patch);
+      });
+    const count = store.getTeam().filter(t => t.id !== memberId && (t.country || '').trim().toLowerCase() === country).length;
+    alert(`Applied ${days} holiday days to ${count} other member${count === 1 ? '' : 's'} from ${document.getElementById('detail-country').value.trim()}.`);
   });
 
   document.getElementById('detail-cancel').addEventListener('click', () => modal.close());
