@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Quarter Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/gantt.css">
   <link rel="stylesheet" href="css/print.css">
@@ -16,7 +19,7 @@
 
 <!-- ══ Header ══════════════════════════════════════════════════════════ -->
 <header id="app-header">
-  <h1>📅 Quarter Planner <span id="quarter-label"></span></h1>
+  <h1>📅 <span class="logo-text">Quarter Planner</span> <span id="quarter-label"></span></h1>
   <nav class="wiz-tabs">
     <div class="wiz-tab active" data-step="1">1 · Wish List</div>
     <div class="wiz-tab future" data-step="2">2 · Team</div>
@@ -60,10 +63,8 @@
         <thead>
           <tr>
             <th style="width:28px"></th>
-            <th>Mission / Feature</th>
+            <th>Initiative</th>
             <th>Description</th>
-            <th>Owner</th>
-            <th style="width:110px">Priority</th>
             <th style="width:40px"></th>
           </tr>
         </thead>

@@ -3,7 +3,7 @@
 import * as store from '../store.js';
 import * as wizard from '../wizard.js';
 import * as sheet from '../utils/sheetjs-adapter.js';
-import { openDrivePicker } from '../utils/drive-picker.js';
+import { fetchFromSharedUrl } from '../utils/drive-picker.js';
 import { openMapper, applyMapping, autoMap } from '../components/column-mapper.js';
 import * as modal from '../components/modal.js';
 
@@ -33,10 +33,6 @@ function rowHTML(m) {
       <td class="drag-handle" title="Drag to reorder">⠿</td>
       <td><input class="tbl-input" data-field="title" value="${esc(m.title)}"></td>
       <td><input class="tbl-input" data-field="description" value="${esc(m.description)}"></td>
-      <td><input class="tbl-input" data-field="owner" value="${esc(m.owner)}"></td>
-      <td>
-        <select class="tbl-input tbl-select" data-field="priority">${prioOpts}</select>
-      </td>
       <td>
         <button class="icon-btn del-btn" title="Delete">🗑</button>
       </td>
@@ -64,21 +60,42 @@ function bindEvents() {
     e.target.value = '';
   });
 
-  // Drive button
-  document.getElementById('wl-drive-btn').addEventListener('click', async () => {
-    const settings = store.getSettings();
-    try {
-      const file = await openDrivePicker(settings.googleClientId, settings.googleApiKey);
-      await handleFile(file);
-    } catch (err) {
-      if (err.message !== 'cancelled') {
-        if (err.message.includes('Client ID')) {
-          showDriveSetup();
-        } else {
-          alert('Drive error: ' + err.message);
-        }
+  // Drive button — shared link flow
+  document.getElementById('wl-drive-btn').addEventListener('click', () => {
+    modal.open({
+      title: 'Import from Google Drive',
+      html: `
+        <p style="margin-bottom:.75rem;color:var(--text-muted);font-size:.85rem">
+          In Google Sheets, click <strong>Share → Anyone with the link → Viewer</strong>,
+          then copy and paste the link below.
+        </p>
+        <label class="form-label">Shared link</label>
+        <input id="drive-link-input" class="form-input" style="width:100%;margin-bottom:1rem"
+          placeholder="https://docs.google.com/spreadsheets/d/…">
+        <div id="drive-link-status" style="min-height:1.1rem;font-size:.82rem;margin-bottom:.75rem"></div>
+        <div style="display:flex;gap:.75rem;justify-content:flex-end">
+          <button class="btn btn-ghost" id="drive-link-cancel">Cancel</button>
+          <button class="btn btn-primary" id="drive-link-import">⬇ Import</button>
+        </div>`
+    });
+
+    document.getElementById('drive-link-cancel').addEventListener('click', () => modal.close());
+    document.getElementById('drive-link-import').addEventListener('click', async () => {
+      const url = document.getElementById('drive-link-input').value.trim();
+      if (!url) return;
+      const statusEl = document.getElementById('drive-link-status');
+      const btn = document.getElementById('drive-link-import');
+      btn.disabled = true; btn.textContent = 'Fetching…';
+      statusEl.style.color = 'var(--text-muted)'; statusEl.textContent = 'Downloading…';
+      try {
+        const file = await fetchFromSharedUrl(url);
+        modal.close();
+        await handleFile(file);
+      } catch (err) {
+        statusEl.style.color = 'var(--red)'; statusEl.textContent = err.message;
+        btn.disabled = false; btn.textContent = '⬇ Import';
       }
-    }
+    });
   });
 
   // Drag-and-drop zone
@@ -191,34 +208,6 @@ async function handleFile(file) {
   }
 }
 
-function showDriveSetup() {
-  modal.open({
-    title: 'Google Drive Setup',
-    html: `
-      <p style="margin-bottom:1rem;color:var(--text-muted)">Enter your Google OAuth Client ID to enable Drive import.</p>
-      <label class="form-label">Google Client ID</label>
-      <input id="drive-client-id" class="form-input" style="width:100%;margin-bottom:.75rem"
-        placeholder="xxx.apps.googleusercontent.com"
-        value="${store.getSettings().googleClientId || ''}">
-      <label class="form-label">Google API Key (optional)</label>
-      <input id="drive-api-key" class="form-input" style="width:100%;margin-bottom:1.5rem"
-        placeholder="AIza..."
-        value="${store.getSettings().googleApiKey || ''}">
-      <div style="display:flex;gap:1rem;justify-content:flex-end">
-        <button class="btn btn-ghost" id="drive-cancel">Cancel</button>
-        <button class="btn btn-primary" id="drive-save">Save & Connect</button>
-      </div>`
-  });
-  document.getElementById('drive-save').addEventListener('click', () => {
-    store.updateSettings({
-      googleClientId: document.getElementById('drive-client-id').value.trim(),
-      googleApiKey: document.getElementById('drive-api-key').value.trim()
-    });
-    modal.close();
-    document.getElementById('wl-drive-btn').click();
-  });
-  document.getElementById('drive-cancel').addEventListener('click', () => modal.close());
-}
 
 function updateCount() {
   const el = document.getElementById('wl-count');
