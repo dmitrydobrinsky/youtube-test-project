@@ -14,7 +14,6 @@ export function render(container, committed, total) {
         <div class="gauge-fill" style="width:${pct}%;background:${color}"></div>
       </div>
       <div class="gauge-labels">
-        <span>${committed} days committed</span>
         <span style="color:${color}">
           ${over ? `⚠ ${committed - total} days over capacity` : `${total - committed} days remaining`}
         </span>
@@ -44,8 +43,6 @@ export function renderByRole(container, committedByRole, capacityByRole) {
         <div class="gauge-bar role-gauge-bar">
           <div class="gauge-fill" style="width:${pct}%;background:${color}"></div>
         </div>
-        <span class="role-gauge-committed" title="Committed">${committed}d</span>
-        <span class="role-gauge-sep">/</span>
         <span class="role-gauge-capacity" title="Capacity">${capacity}d</span>
         <span class="role-gauge-remaining" style="color:${color}">
           ${capacity === 0 ? '—' : over ? `⚠ +${committed - capacity} over` : `${remaining} left`}
