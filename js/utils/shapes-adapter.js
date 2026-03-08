@@ -55,7 +55,6 @@ export async function fetchEmployees(accessToken) {
                 context
                 fieldType
                 fieldName
-                label
               }
             }
           }
@@ -92,13 +91,10 @@ function normaliseEmployee(emp, idToName = {}) {
     return fields.find(fv => fv.employeeFieldType?.context === context) || null;
   };
 
-  // Also search by fieldName or label (case-insensitive) for fields whose context key is unknown
+  // Also search by fieldName (case-insensitive) for fields whose context key is unknown
   const getRawByName = (name) => {
     const lc = name.toLowerCase();
-    return fields.find(fv =>
-      fv.employeeFieldType?.fieldName?.toLowerCase() === lc ||
-      fv.employeeFieldType?.label?.toLowerCase() === lc
-    ) || null;
+    return fields.find(fv => fv.employeeFieldType?.fieldName?.toLowerCase() === lc) || null;
   };
 
   const extractText = (f) => {
