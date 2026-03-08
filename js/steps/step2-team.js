@@ -4,7 +4,8 @@ import * as store from '../store.js';
 import * as wizard from '../wizard.js';
 import * as modal from '../components/modal.js';
 import * as gauge from '../components/capacity-gauge.js';
-import { refreshAccessToken, fetchEmployees } from '../utils/shapes-adapter.js';
+import { refreshAccessToken, fetchEmployees, fetchTimeAway } from '../utils/shapes-adapter.js';
+import { countWorkingDays, quarterToDateRange, clampDate } from '../utils/holidays.js';
 
 const ROLES = ['Algo', 'Data', 'BI', 'DevOps', 'Fullstack'];
 
@@ -21,6 +22,15 @@ function render() {
   tbody.innerHTML = team.map(m => memberRow(m)).join('');
   bindRowEvents();
   renderSummary();
+  applyTeamSearch();
+}
+
+function applyTeamSearch() {
+  const q = (document.getElementById('team-search')?.value || '').toLowerCase().trim();
+  document.querySelectorAll('#team-tbody tr').forEach(row => {
+    const name = row.querySelector('[data-field="name"]')?.value.toLowerCase() || '';
+    row.style.display = !q || name.includes(q) ? '' : 'none';
+  });
 }
 
 function memberRow(m) {
@@ -45,7 +55,16 @@ function memberRow(m) {
         <input class="tbl-input" data-field="availableWeeks" type="number" min="1" max="13" step="1"
           value="${m.availableWeeks}" style="width:60px"> wks
       </td>
-      <td style="font-weight:600;color:var(--accent)">${m.personDays} days</td>
+      <td>
+        <span style="font-weight:600;color:var(--accent)">${m.personDays} days</span>
+        ${m.workingDays != null ? `
+        <div style="font-size:.7rem;color:var(--text-muted);margin-top:.15rem" title="Working days breakdown">
+          ${m.workingDays}d
+          ${m.holidayDays  ? `<span style="color:var(--yellow)"> − ${m.holidayDays} holidays</span>` : ''}
+          ${m.vacationDays ? `<span style="color:var(--red)"> − ${m.vacationDays} vacation</span>` : ''}
+          ${m.reserveDays  ? `<span style="color:var(--accent)"> − ${m.reserveDays} reserve</span>` : ''}
+        </div>` : ''}
+      </td>
       <td><button class="icon-btn del-btn" title="Remove">🗑</button></td>
     </tr>`;
 }
@@ -59,6 +78,9 @@ function bindEvents() {
   });
 
   document.getElementById('team-shapes-btn').addEventListener('click', openShapesImport);
+
+  document.getElementById('team-sync-days-btn').addEventListener('click', syncHolidaysAndVacations);
+  document.getElementById('team-search').addEventListener('input', applyTeamSearch);
 
   document.getElementById('team-clear-btn').addEventListener('click', async () => {
     const team = store.getTeam();
@@ -311,12 +333,14 @@ async function showImportPreview(employees) {
       team:           e.team || '',
       email:          e.email || '',
       country:        e.country || '',
+      shapesId:       e.shapesId || null,
       capacityPct:    100,
       availableWeeks: 13
     }));
 
     modal.close();
     render();
+    syncHolidaysAndVacations();
   });
 }
 
@@ -354,6 +378,108 @@ function setStatus(type, msg) {
 }
 
 // ── Row events ────────────────────────────────────────────────────────────────
+
+
+async function syncHolidaysAndVacations() {
+  const team = store.getTeam();
+  if (!team.length) { alert('No team members to sync.'); return; }
+
+  const quarterLabel = store.getState().meta.quarterLabel;
+  const range = quarterToDateRange(quarterLabel);
+  if (!range) { alert('Please select a quarter on Step 1 first.'); return; }
+
+  const settings = store.getSettings();
+  if (!settings.shapesAccessToken && !settings.shapesRefreshToken) {
+    alert('No Shapes.co token found. Import your team from Shapes.co first.');
+    return;
+  }
+
+  const btn = document.getElementById('team-sync-days-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Syncing…';
+
+  const startISO = range.start.toISOString().slice(0, 10);
+  const endISO   = range.end.toISOString().slice(0, 10);
+
+  try {
+    // Refresh token if needed
+    let accessToken = settings.shapesAccessToken;
+    if (settings.shapesRefreshToken) {
+      try {
+        const tokens = await refreshAccessToken(settings.shapesRefreshToken);
+        accessToken = tokens.accessToken;
+        store.updateSettings({ shapesAccessToken: tokens.accessToken, shapesRefreshToken: tokens.refreshToken });
+      } catch (e) { /* use existing access token */ }
+    }
+
+    // Fetch all time-away bookings + reasons from Shapes in one call
+    const shapesIds = team.map(m => m.shapesId).filter(Boolean);
+    if (!shapesIds.length) {
+      alert('Team members have no Shapes ID. Please re-import the team from Shapes.co first.');
+      btn.disabled = false; btn.textContent = '📅 Sync Holidays & Vacations';
+      return;
+    }
+    const { bookings, reasonCategory } = await fetchTimeAway(accessToken, shapesIds, startISO, endISO);
+
+    console.log('[Sync] quarter:', startISO, '→', endISO);
+    console.log('[Sync] shapesIds:', shapesIds);
+    console.log('[Sync] total bookings returned:', bookings.length);
+    console.log('[Sync] reasonCategory:', reasonCategory);
+    bookings.forEach(b => console.log('[Booking]', b.employeeId, b.fromStr, '→', b.toStr, b.bookingStatus, 'reason:', b.timeAwayReasonId));
+
+    // Tally days per employee per category — clamp bookings to quarter window
+    const maps = { vacation: {}, holiday: {}, reserve: {} };
+
+    bookings
+      .filter(b => {
+        if (!['approved', 'Approved'].includes(b.bookingStatus)) return false;
+        if (!b.fromStr || !b.toStr) return false;
+        return b.fromStr <= endISO && b.toStr >= startISO;
+      })
+      .forEach(b => {
+        const from = clampDate(b.fromStr, startISO, endISO);
+        const to   = clampDate(b.toStr,   startISO, endISO);
+        const days = countWorkingDays(from, to);
+        const cat  = reasonCategory[b.timeAwayReasonId] || 'vacation';
+        const id   = String(b.employeeId);
+        maps[cat][id] = (maps[cat][id] || 0) + days;
+        console.log('[Sync] mapped:', id, cat, from, '→', to, '=', days, 'days');
+      });
+
+    // Total working days in the quarter (Mon–Fri, no adjustments)
+    const totalWorkingDays = countWorkingDays(range.start, range.end);
+    console.log('[Sync] totalWorkingDays:', totalWorkingDays);
+
+    // Update each team member
+    team.forEach(m => {
+      const id          = String(m.shapesId);
+      const holidayDays  = maps.holiday[id]  || 0;
+      const vacationDays = maps.vacation[id] || 0;
+      const reserveDays  = maps.reserve[id]  || 0;
+      const workingDays  = totalWorkingDays - holidayDays;
+      const netDays      = Math.max(0, workingDays - vacationDays - reserveDays);
+      const personDays   = Math.round(netDays * m.capacityPct / 100);
+
+      console.log(`[Sync] ${m.name} | shapesId:${id} | working:${workingDays} holiday:${holidayDays} vacation:${vacationDays} reserve:${reserveDays} net:${netDays} → ${personDays}d`);
+
+      store.updateTeamMember(m.id, {
+        workingDays,
+        holidayDays,
+        vacationDays,
+        reserveDays,
+        personDays,
+        availableWeeks: parseFloat((netDays / 5).toFixed(1))
+      });
+    });
+
+    render();
+  } catch (err) {
+    alert('Sync failed: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📅 Sync Holidays & Vacations';
+  }
+}
 
 function bindRowEvents() {
   const tbody = document.getElementById('team-tbody');

@@ -126,6 +126,79 @@ function normaliseEmployee(emp, idToName = {}) {
   };
 }
 
+// ── Fetch time-away bookings for a list of employee IDs within a date range ──
+
+const RESERVE_KEYWORDS = ['reserve', 'military', 'miluim', 'מילואים', 'army', 'duty'];
+const HOLIDAY_KEYWORDS = ['holiday', 'public holiday', 'bank holiday', 'חג', 'national'];
+
+// Parse a Shapes date field: { date: "2026-04-01T00:00:00+03:00", dayFragment: 1 }
+// Returns a plain 'YYYY-MM-DD' string using the local date portion (ignoring time/tz)
+export function parseShapesDateStr(val) {
+  if (!val) return null;
+  const raw = typeof val === 'string' ? val : (val.date || null);
+  if (!raw) return null;
+  // Take just the date part before 'T' — avoids timezone shift issues
+  return raw.slice(0, 10);
+}
+
+// Returns { bookings, reasonCategory }
+// bookings: raw array with extra field isoClamped{from,to}
+// reasonCategory: reasonId → 'reserve'|'holiday'|'vacation'
+export async function fetchTimeAway(accessToken, employeeIds, startDate, endDate) {
+  // Fetch reasons separately so a 403 on reasons doesn't break bookings
+  let reasonCategory = {};
+  try {
+    const rRes = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+      body: JSON.stringify({ query: `{ timeAwayReasons { id name type } }` })
+    });
+    const rJson = await rRes.json();
+    if (!rJson.errors) {
+      (rJson.data?.timeAwayReasons || []).forEach(r => {
+        const n = (r.name + ' ' + r.type).toLowerCase();
+        if (RESERVE_KEYWORDS.some(kw => n.includes(kw)))      reasonCategory[r.id] = 'reserve';
+        else if (HOLIDAY_KEYWORDS.some(kw => n.includes(kw))) reasonCategory[r.id] = 'holiday';
+        else                                                   reasonCategory[r.id] = 'vacation';
+      });
+    }
+  } catch { /* permissions issue — continue without reason names */ }
+
+  // Fetch ALL bookings for these employees (no date filter — we'll clip in JS)
+  // Removing date filter catches bookings that span across quarter boundaries
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+    body: JSON.stringify({
+      query: `
+        query GetTimeAway($empIds: [ID!]) {
+          timeAwayBookings(filters: { employeeId: $empIds }) {
+            employeeId
+            timeAwayReasonId
+            fromDate
+            toDate
+            bookingStatus
+          }
+        }
+      `,
+      variables: { empIds: employeeIds }
+    })
+  });
+
+  if (!res.ok) throw new Error(`Time-away API error: ${res.status}`);
+  const json = await res.json();
+  if (json.errors) throw new Error(json.errors.map(e => e.message).join(', '));
+
+  // Attach parsed date strings to each booking
+  const bookings = (json.data?.timeAwayBookings || []).map(b => ({
+    ...b,
+    fromStr: parseShapesDateStr(b.fromDate),
+    toStr:   parseShapesDateStr(b.toDate)
+  }));
+
+  return { bookings, reasonCategory };
+}
+
 function inferRole(jobTitle, team) {
   const s = `${jobTitle} ${team}`.toLowerCase();
   if (s.includes('algo') || s.includes('algorithm') || s.includes('ml') || s.includes('machine learning') || s.includes('ai')) return 'Algo';

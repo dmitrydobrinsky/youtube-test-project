@@ -137,9 +137,14 @@ function addTeamMember(data = {}) {
     team: data.team || '',
     email: data.email || '',
     country: data.country || '',
+    shapesId: data.shapesId || null,
     capacityPct: cap,
     availableWeeks: weeks,
-    personDays: Math.round(cap / 100 * weeks * 5)
+    personDays: Math.round(cap / 100 * weeks * 5),
+    workingDays: data.workingDays ?? null,    // total working days in quarter
+    holidayDays: data.holidayDays ?? null,    // public holidays
+    vacationDays: data.vacationDays ?? null,  // planned time away
+    reserveDays: data.reserveDays ?? null     // military reserve duty
   };
   state.team.push(m);
   save();
@@ -150,7 +155,10 @@ function updateTeamMember(id, patch) {
   const m = state.team.find(x => x.id === id);
   if (!m) return;
   Object.assign(m, patch);
-  m.personDays = Math.round((m.capacityPct / 100) * m.availableWeeks * 5);
+  // Only auto-recalculate personDays if not explicitly provided in patch
+  if (patch.personDays === undefined) {
+    m.personDays = Math.round((m.capacityPct / 100) * m.availableWeeks * 5);
+  }
   save();
 }
 
