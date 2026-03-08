@@ -1,0 +1,20 @@
+/* print.css */
+@media print {
+  #app-header, #app-footer, .toolbar, .export-actions,
+  #wl-drop-zone, .del-btn, .icon-btn, .add-init-btn,
+  .prio-handle, .drag-handle, .cut-btn { display: none !important; }
+
+  body { background: #fff; color: #000; font-size: 12pt; }
+
+  .step-panel { display: block !important; }
+  .step-panel:not(.active) { display: none !important; }
+
+  .export-preview { max-height: none; overflow: visible; border: none; padding: 0; }
+  .export-panel { flex-direction: column; }
+
+  .export-mission { page-break-inside: avoid; }
+  .export-table { font-size: 10pt; }
+  .export-table th, .export-table td { border: 1px solid #ccc; padding: 4px 6px; }
+
+  a { color: inherit; text-decoration: none; }
+}

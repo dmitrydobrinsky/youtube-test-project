@@ -1,0 +1,168 @@
+/* gantt.css — Timeline/Gantt styles */
+
+.tl-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.tl-scroll {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.tl-table {
+  border-collapse: collapse;
+  min-width: 900px;
+  width: 100%;
+  background: var(--surface);
+}
+
+.tl-table th, .tl-table td {
+  border: 1px solid var(--border);
+  padding: 0;
+}
+
+.tl-label-hdr {
+  min-width: 180px;
+  max-width: 220px;
+  padding: .5rem .75rem !important;
+  font-size: .75rem;
+  text-align: left;
+  background: var(--surface2);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.tl-week-hdr {
+  width: calc((100% - 220px - 36px) / 13);
+  min-width: 44px;
+  text-align: center;
+  padding: .4rem .2rem !important;
+  font-size: .7rem;
+  color: var(--text-muted);
+  background: var(--surface2);
+}
+
+.tl-group-row td {
+  background: var(--surface2);
+  padding: .4rem .75rem !important;
+  border: none;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.tl-group-label {
+  font-size: .75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.tl-row:hover .tl-label { background: rgba(99,102,241,.05); }
+
+.tl-label {
+  min-width: 180px;
+  max-width: 220px;
+  padding: .4rem .75rem !important;
+  font-size: .8rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle !important;
+}
+
+.tl-cell {
+  position: relative;
+  height: 36px;
+  min-width: 44px;
+  cursor: pointer;
+  user-select: none;
+  transition: background .1s;
+}
+
+.tl-cell:hover { background: rgba(99,102,241,.1) !important; }
+
+.tl-active {
+  border-color: transparent;
+}
+
+.tl-start { border-radius: 4px 0 0 4px; }
+.tl-end   { border-radius: 0 4px 4px 0; }
+
+.tl-bar-left,
+.tl-bar-right {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  width: 8px;
+  border-radius: 4px;
+  opacity: .9;
+}
+
+.tl-bar-left  { left: 2px; cursor: ew-resize; }
+.tl-bar-right { right: 2px; cursor: ew-resize; }
+
+.tl-actions {
+  width: 36px;
+  text-align: center;
+  padding: .2rem !important;
+}
+
+.milestone-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: .65rem;
+  color: var(--yellow);
+  pointer-events: none;
+}
+
+/* Heatmap row */
+#tl-heatmap {
+  margin-top: .5rem;
+  overflow-x: auto;
+}
+
+.heatmap-row {
+  display: flex;
+  align-items: flex-end;
+  height: 48px;
+  gap: 0;
+}
+
+.heatmap-label {
+  min-width: 180px;
+  max-width: 220px;
+  font-size: .7rem;
+  color: var(--text-muted);
+  padding-right: .5rem;
+  text-align: right;
+  line-height: 48px;
+  flex-shrink: 0;
+}
+
+.heatmap-cell {
+  flex: 1;
+  min-width: 44px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  border: 1px solid var(--border);
+  position: relative;
+  cursor: default;
+}
+
+.heatmap-fill {
+  width: 100%;
+  transition: height .3s;
+  min-height: 2px;
+}

@@ -3,196 +3,200 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tic Tac Toe</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: #1a1a2e;
-      font-family: 'Segoe UI', sans-serif;
-      color: #eee;
-    }
-
-    h1 {
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
-      letter-spacing: 0.1em;
-      color: #e94560;
-    }
-
-    #status {
-      font-size: 1.2rem;
-      margin-bottom: 1.5rem;
-      min-height: 1.5em;
-      color: #a8dadc;
-    }
-
-    #board {
-      display: grid;
-      grid-template-columns: repeat(3, 110px);
-      grid-template-rows: repeat(3, 110px);
-      gap: 8px;
-    }
-
-    .cell {
-      background: #16213e;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 3rem;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.15s, transform 0.1s;
-      user-select: none;
-    }
-
-    .cell:hover:not(.taken) {
-      background: #0f3460;
-      transform: scale(1.05);
-    }
-
-    .cell.x { color: #e94560; }
-    .cell.o { color: #a8dadc; }
-
-    .cell.win {
-      background: #0f3460;
-      box-shadow: 0 0 16px 4px rgba(233, 69, 96, 0.5);
-    }
-
-    #reset {
-      margin-top: 2rem;
-      padding: 0.7rem 2rem;
-      font-size: 1rem;
-      background: #e94560;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-    }
-
-    #reset:hover {
-      background: #c73652;
-      transform: scale(1.05);
-    }
-
-    #scoreboard {
-      display: flex;
-      gap: 2rem;
-      margin-bottom: 1.5rem;
-      font-size: 1rem;
-      color: #aaa;
-    }
-
-    .score-item span {
-      font-size: 1.4rem;
-      font-weight: bold;
-    }
-
-    .score-item.x-score span { color: #e94560; }
-    .score-item.o-score span { color: #a8dadc; }
-    .score-item.draw-score span { color: #888; }
-  </style>
+  <title>Quarter Planner</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/gantt.css">
+  <link rel="stylesheet" href="css/print.css">
+  <!-- CDN libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 </head>
 <body>
-  <h1>Tic Tac Toe</h1>
 
-  <div id="scoreboard">
-    <div class="score-item x-score">X <span id="score-x">0</span></div>
-    <div class="score-item draw-score">Draw <span id="score-draw">0</span></div>
-    <div class="score-item o-score">O <span id="score-o">0</span></div>
+<!-- ══ Header ══════════════════════════════════════════════════════════ -->
+<header id="app-header">
+  <h1>📅 Quarter Planner <span id="quarter-label"></span></h1>
+  <nav class="wiz-tabs">
+    <div class="wiz-tab active" data-step="1">1 · Wish List</div>
+    <div class="wiz-tab future" data-step="2">2 · Team</div>
+    <div class="wiz-tab future" data-step="3">3 · Breakdown</div>
+    <div class="wiz-tab future" data-step="4">4 · Prioritize</div>
+    <div class="wiz-tab future" data-step="5">5 · Timeline</div>
+    <div class="wiz-tab future" data-step="6">6 · Export</div>
+  </nav>
+</header>
+
+<!-- ══ Main ════════════════════════════════════════════════════════════ -->
+<main id="app-main">
+
+  <!-- ── Step 1: Wish List ───────────────────────────────────────────── -->
+  <section id="step-1" class="step-panel active">
+    <h2 class="step-title">Wish List</h2>
+    <p class="step-desc">Collect missions from the Product Manager. Upload a file or add rows manually.</p>
+
+    <div class="toolbar">
+      <div>
+        <label class="form-label">Quarter</label>
+        <select id="wl-quarter-label" class="form-input" style="width:140px"></select>
+      </div>
+      <div style="flex:1"></div>
+      <label style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;color:var(--text-muted);cursor:pointer">
+        <input type="checkbox" id="wl-has-header" checked> First row is header
+      </label>
+      <button class="btn btn-ghost" id="wl-upload-btn">⬆ Upload CSV / Excel</button>
+      <button class="btn btn-ghost" id="wl-drive-btn">☁ Google Drive</button>
+      <button class="btn btn-primary" id="wl-add-row">+ Add Row</button>
+      <input type="file" id="wl-file-input" accept=".csv,.xls,.xlsx" style="display:none">
+    </div>
+
+    <div id="wl-drop-zone">
+      <p>Drag & drop a CSV or Excel file here</p>
+      <small>or use the buttons above</small>
+    </div>
+
+    <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:28px"></th>
+            <th>Mission / Feature</th>
+            <th>Description</th>
+            <th>Owner</th>
+            <th style="width:110px">Priority</th>
+            <th style="width:40px"></th>
+          </tr>
+        </thead>
+        <tbody id="wl-tbody"></tbody>
+      </table>
+    </div>
+    <p style="margin-top:.75rem;color:var(--text-muted);font-size:.8rem" id="wl-count">0 mission(s)</p>
+  </section>
+
+  <!-- ── Step 2: Team Setup ──────────────────────────────────────────── -->
+  <section id="step-2" class="step-panel">
+    <h2 class="step-title">Team Setup</h2>
+    <p class="step-desc">Define who is working this quarter and their available capacity.</p>
+
+    <div class="toolbar">
+      <button class="btn btn-ghost" id="team-shapes-btn">⬇ Import from Shapes.co</button>
+      <button class="btn btn-primary" id="team-add-btn">+ Add Member</button>
+      <button class="btn btn-danger" id="team-clear-btn">🗑 Clear All</button>
+    </div>
+
+    <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Capacity</th>
+            <th>Available Weeks</th>
+            <th>Person-Days</th>
+            <th style="width:40px"></th>
+          </tr>
+        </thead>
+        <tbody id="team-tbody"></tbody>
+      </table>
+    </div>
+
+    <p style="margin-top:.75rem;color:var(--text-muted);font-size:.8rem" id="team-total"></p>
+    <div id="team-gauge" style="margin-top:.5rem"></div>
+  </section>
+
+  <!-- ── Step 3: Breakdown ───────────────────────────────────────────── -->
+  <section id="step-3" class="step-panel">
+    <h2 class="step-title">Initiative Breakdown</h2>
+    <p class="step-desc">Break each mission into concrete initiatives with effort estimates.</p>
+
+    <div id="breakdown-gauge" style="margin-bottom:1rem"></div>
+    <div id="breakdown-missions"></div>
+  </section>
+
+  <!-- ── Step 4: Prioritization ─────────────────────────────────────── -->
+  <section id="step-4" class="step-panel">
+    <h2 class="step-title">Prioritization</h2>
+    <p class="step-desc">Score initiatives and drag to reorder. Use ✂ to move items below the cut line.</p>
+
+    <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:28px"></th>
+            <th style="width:30px">#</th>
+            <th>Initiative</th>
+            <th>Business Impact</th>
+            <th>Strategic Alignment</th>
+            <th>Confidence</th>
+            <th>Effort</th>
+            <th style="width:60px">Score</th>
+            <th style="width:40px"></th>
+          </tr>
+        </thead>
+        <tbody id="prio-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Step 5: Timeline ────────────────────────────────────────────── -->
+  <section id="step-5" class="step-panel">
+    <h2 class="step-title">Timeline</h2>
+    <p class="step-desc">Click and drag across weeks to set start/end for each initiative. Click ◆ to add milestones.</p>
+
+    <div class="tl-controls">
+      <label>
+        Group by:
+        <select id="tl-groupby" class="form-input" style="width:auto;display:inline-block;margin-left:.4rem">
+          <option value="mission">Mission</option>
+          <option value="owner">Owner</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="timeline-container"></div>
+    <div id="tl-heatmap" style="margin-top:.5rem"></div>
+  </section>
+
+  <!-- ── Step 6: Export ──────────────────────────────────────────────── -->
+  <section id="step-6" class="step-panel">
+    <h2 class="step-title">Export & Share</h2>
+    <p class="step-desc">Review your plan and download or share it.</p>
+
+    <div class="export-panel">
+      <div class="export-actions">
+        <button class="btn btn-primary" id="export-xlsx">⬇ Download Excel (.xlsx)</button>
+        <button class="btn btn-ghost" id="export-csv">⬇ Download CSV</button>
+        <button class="btn btn-ghost" id="export-print">🖨 Print / Save PDF</button>
+        <button class="btn btn-ghost" id="export-share">🔗 Copy Share Link</button>
+        <hr style="border-color:var(--border);margin:.5rem 0">
+        <button class="btn btn-danger" id="export-new-quarter">↺ New Quarter</button>
+      </div>
+      <div class="export-preview" id="export-summary"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══ Footer nav ═══════════════════════════════════════════════════════ -->
+<footer id="app-footer">
+  <button class="btn btn-ghost" id="btn-back">← Back</button>
+  <span id="footer-hint" style="color:var(--text-muted);font-size:.8rem"></span>
+  <button class="btn btn-primary" id="btn-next">Next →</button>
+</footer>
+
+<!-- ══ Modal ════════════════════════════════════════════════════════════ -->
+<div id="modal-overlay">
+  <div id="modal-box">
+    <div id="modal-header">
+      <span id="modal-title"></span>
+      <button id="modal-close-btn">✕</button>
+    </div>
+    <div id="modal-body"></div>
   </div>
+</div>
 
-  <div id="status">X's turn</div>
+<!-- ══ App entry ════════════════════════════════════════════════════════ -->
+<script type="module" src="js/app.js"></script>
 
-  <div id="board">
-    <div class="cell" data-i="0"></div>
-    <div class="cell" data-i="1"></div>
-    <div class="cell" data-i="2"></div>
-    <div class="cell" data-i="3"></div>
-    <div class="cell" data-i="4"></div>
-    <div class="cell" data-i="5"></div>
-    <div class="cell" data-i="6"></div>
-    <div class="cell" data-i="7"></div>
-    <div class="cell" data-i="8"></div>
-  </div>
-
-  <button id="reset">New Game</button>
-
-  <script>
-    const cells = document.querySelectorAll('.cell');
-    const status = document.getElementById('status');
-    const resetBtn = document.getElementById('reset');
-    const scoreX = document.getElementById('score-x');
-    const scoreO = document.getElementById('score-o');
-    const scoreDraw = document.getElementById('score-draw');
-
-    const WINS = [
-      [0,1,2],[3,4,5],[6,7,8],
-      [0,3,6],[1,4,7],[2,5,8],
-      [0,4,8],[2,4,6]
-    ];
-
-    let board, current, gameOver, scores;
-
-    function init() {
-      board = Array(9).fill(null);
-      current = 'X';
-      gameOver = false;
-      cells.forEach(c => { c.textContent = ''; c.className = 'cell'; });
-      status.textContent = "X's turn";
-      if (!scores) scores = { X: 0, O: 0, Draw: 0 };
-    }
-
-    function checkWinner() {
-      for (const [a, b, c] of WINS) {
-        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-          return { winner: board[a], line: [a, b, c] };
-        }
-      }
-      if (board.every(Boolean)) return { winner: 'Draw' };
-      return null;
-    }
-
-    function handleClick(e) {
-      const i = +e.target.dataset.i;
-      if (gameOver || board[i]) return;
-
-      board[i] = current;
-      const cell = e.target;
-      cell.textContent = current;
-      cell.classList.add(current.toLowerCase(), 'taken');
-
-      const result = checkWinner();
-      if (result) {
-        gameOver = true;
-        if (result.winner === 'Draw') {
-          status.textContent = "It's a draw!";
-          scores.Draw++;
-          scoreDraw.textContent = scores.Draw;
-        } else {
-          status.textContent = `${result.winner} wins!`;
-          result.line.forEach(idx => cells[idx].classList.add('win'));
-          scores[result.winner]++;
-          if (result.winner === 'X') scoreX.textContent = scores.X;
-          else scoreO.textContent = scores.O;
-        }
-      } else {
-        current = current === 'X' ? 'O' : 'X';
-        status.textContent = `${current}'s turn`;
-      }
-    }
-
-    cells.forEach(c => c.addEventListener('click', handleClick));
-    resetBtn.addEventListener('click', init);
-
-    init();
-  </script>
 </body>
 </html>
