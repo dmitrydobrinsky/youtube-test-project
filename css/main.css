@@ -493,6 +493,39 @@ tr:hover .drag-handle { opacity: 1; }
 
 .empty-hint { color: var(--text-muted); font-size: .85rem; padding: .5rem .25rem; font-style: italic; }
 
+/* ── Per-role effort grid (Step 3) ───────────────────────────── */
+.role-effort-row {
+  display: flex;
+  gap: .4rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin: .35rem 0;
+}
+.role-effort-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .2rem;
+}
+.role-effort-label {
+  font-size: .65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+}
+.role-effort-total .role-effort-sum {
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 52px;
+  text-align: center;
+  padding: .35rem .4rem;
+  background: rgba(99,102,241,.1);
+  border-radius: 6px;
+  border: 1px solid rgba(99,102,241,.25);
+}
+
 /* ── Priority step ───────────────────────────────────────────── */
 .score-stars { display: flex; gap: .1rem; }
 .star { cursor: pointer; font-size: 1.1rem; color: var(--border); transition: color .1s; }

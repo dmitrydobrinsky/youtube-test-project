@@ -5,6 +5,7 @@ import * as wizard from '../wizard.js';
 import * as modal from '../components/modal.js';
 import * as gauge from '../components/capacity-gauge.js';
 
+const ROLES = ['Algo', 'Data', 'BI', 'Fullstack', 'DevOps'];
 const TARGETS = ['H1', 'H2', 'Full', 'Stretch'];
 
 export function init() {
@@ -16,25 +17,31 @@ function render() {
   const missions = store.getMissions();
   const container = document.getElementById('breakdown-missions');
   if (!container) return;
-
   container.innerHTML = missions.map(m => missionBlock(m)).join('');
   bindEvents();
   renderGauge();
 }
 
+function missionEffort(missionId) {
+  return store.getInitiativesByMission(missionId)
+    .filter(i => !i.isStretch)
+    .reduce((s, i) => s + (i.effortDays || 0), 0);
+}
+
 function missionBlock(mission) {
   const color = store.getState().settings.missionColors[mission.id] || '#6366f1';
   const initiatives = store.getInitiativesByMission(mission.id);
+  const total = missionEffort(mission.id);
   return `
     <div class="mission-block" data-mission-id="${mission.id}">
       <div class="mission-header" style="border-left:4px solid ${color}">
         <span class="mission-title">${esc(mission.title)}</span>
-        <span class="mission-prio badge badge-${(mission.priority||'').toLowerCase()}">${mission.priority || ''}</span>
-        <button class="btn btn-sm btn-primary add-init-btn" data-mission="${mission.id}">+ Add Initiative</button>
+        ${total ? `<span style="font-size:.78rem;color:var(--text-muted);margin-left:auto;margin-right:.75rem">${total} days total</span>` : ''}
+        <button class="btn btn-sm btn-primary add-init-btn" data-mission="${mission.id}">+ Add Task</button>
       </div>
       <div class="initiatives-list" id="inits-${mission.id}">
         ${initiatives.map(i => initiativeRow(i)).join('')}
-        ${!initiatives.length ? '<p class="empty-hint">No initiatives yet. Click "+ Add Initiative" to start.</p>' : ''}
+        ${!initiatives.length ? '<p class="empty-hint">No tasks yet. Click "+ Add Task" to start.</p>' : ''}
       </div>
     </div>`;
 }
@@ -48,16 +55,33 @@ function initiativeRow(init) {
     `<option value="${t}" ${init.target === t ? 'selected' : ''}>${t}</option>`
   ).join('');
 
+  const roleEfforts = init.roleEfforts || {};
+  const total = init.effortDays || 0;
+
+  const roleInputs = ROLES.map(r => `
+    <div class="role-effort-cell">
+      <div class="role-effort-label">${r}</div>
+      <input class="tbl-input role-effort-input" data-role="${r}"
+        type="number" min="0" value="${Number(roleEfforts[r] || 0)}"
+        style="width:52px;text-align:center">
+    </div>`).join('');
+
   return `
     <div class="init-row ${init.isStretch ? 'stretch' : ''}" data-init-id="${init.id}">
       <div class="init-main">
-        <input class="tbl-input init-title" data-field="title" placeholder="Initiative title" value="${esc(init.title)}">
+        <input class="tbl-input init-title" data-field="title" placeholder="Task title" value="${esc(init.title)}">
+
+        <div class="role-effort-row">
+          ${roleInputs}
+          <div class="role-effort-cell role-effort-total">
+            <div class="role-effort-label">Total</div>
+            <div class="role-effort-sum">${total} d</div>
+          </div>
+        </div>
+
         <div class="init-meta">
           <label>Owner:
             <select class="tbl-input tbl-select init-field" data-field="ownerId">${ownerOpts}</select>
-          </label>
-          <label>Effort:
-            <input class="tbl-input init-field" data-field="effortDays" type="number" min="0" value="${init.effortDays}" style="width:70px"> days
           </label>
           <label>Target:
             <select class="tbl-input tbl-select init-field" data-field="target">${targetOpts}</select>
@@ -75,20 +99,58 @@ function initiativeRow(init) {
 function bindEvents() {
   const container = document.getElementById('breakdown-missions');
 
-  // Add initiative
+  // Add task
   container.querySelectorAll('.add-init-btn').forEach(btn => {
     btn.addEventListener('click', e => {
       const missionId = e.target.dataset.mission;
-      store.addInitiative({ missionId, title: '', effortDays: 5 });
+      store.addInitiative({ missionId, title: '' });
       render();
-      // focus the new title
       const list = document.getElementById(`inits-${missionId}`);
       const rows = list.querySelectorAll('.init-title');
       if (rows.length) rows[rows.length - 1].focus();
     });
   });
 
-  // Inline edit
+  // Role effort inputs
+  container.querySelectorAll('.role-effort-input').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const row = e.target.closest('[data-init-id]');
+      const id = row.dataset.initId;
+      const init = store.getInitiatives().find(x => x.id === id);
+      if (!init) return;
+
+      const roleEfforts = { ...(init.roleEfforts || {}) };
+      roleEfforts[e.target.dataset.role] = Number(e.target.value) || 0;
+      store.updateInitiative(id, { roleEfforts });
+
+      // Update total display inline without full re-render
+      const updated = store.getInitiatives().find(x => x.id === id);
+      const sumEl = row.querySelector('.role-effort-sum');
+      if (sumEl) sumEl.textContent = (updated?.effortDays || 0) + ' d';
+
+      // Update mission total
+      const missionBlock = row.closest('.mission-block');
+      if (missionBlock) {
+        const missionId = missionBlock.dataset.missionId;
+        const mTotal = store.getInitiativesByMission(missionId)
+          .filter(i => !i.isStretch).reduce((s, i) => s + (i.effortDays || 0), 0);
+        let totalEl = missionBlock.querySelector('.mission-header span[style*="text-muted"]');
+        if (totalEl) {
+          totalEl.textContent = mTotal ? `${mTotal} days total` : '';
+        } else if (mTotal) {
+          const addBtn = missionBlock.querySelector('.add-init-btn');
+          const span = document.createElement('span');
+          span.style.cssText = 'font-size:.78rem;color:var(--text-muted);margin-left:auto;margin-right:.75rem';
+          missionBlock.querySelector('.mission-header').insertBefore(span, addBtn);
+          span.textContent = `${mTotal} days total`;
+        }
+      }
+
+      renderGauge();
+    });
+  });
+
+  // Other inline fields
   container.querySelectorAll('.init-field, .init-title, .init-notes').forEach(inp => {
     const event = (inp.tagName === 'SELECT' || inp.type === 'checkbox') ? 'change' : 'input';
     inp.addEventListener(event, e => {
@@ -96,10 +158,8 @@ function bindEvents() {
       const id = row.dataset.initId;
       const field = e.target.dataset.field;
       let val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-      if (field === 'effortDays') val = Number(val);
       store.updateInitiative(id, { [field]: val });
-      if (field === 'effortDays' || field === 'isStretch') renderGauge();
-      if (field === 'isStretch') row.classList.toggle('stretch', val);
+      if (field === 'isStretch') { row.classList.toggle('stretch', val); renderGauge(); }
     });
   });
 
@@ -108,7 +168,7 @@ function bindEvents() {
     btn.addEventListener('click', async e => {
       const row = e.target.closest('[data-init-id]');
       const id = row.dataset.initId;
-      const ok = await modal.confirm('Delete this initiative?');
+      const ok = await modal.confirm('Delete this task?');
       if (ok) { store.deleteInitiative(id); render(); }
     });
   });

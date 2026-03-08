@@ -179,13 +179,21 @@ function getInitiativesByMission(missionId) {
   return state.initiatives.filter(i => i.missionId === missionId);
 }
 
+const ROLES = ['Algo', 'Data', 'BI', 'Fullstack', 'DevOps'];
+
+function _sumRoleEfforts(roleEfforts) {
+  return ROLES.reduce((s, r) => s + (Number(roleEfforts?.[r]) || 0), 0);
+}
+
 function addInitiative(data = {}) {
+  const roleEfforts = data.roleEfforts || { Algo: 0, Data: 0, BI: 0, Fullstack: 0, DevOps: 0 };
   const init = {
     id: shortId(),
     missionId: data.missionId || '',
     title: data.title || '',
     ownerId: data.ownerId || '',
-    effortDays: Number(data.effortDays) || 0,
+    roleEfforts,
+    effortDays: _sumRoleEfforts(roleEfforts) || Number(data.effortDays) || 0,
     target: data.target || 'Full',
     notes: data.notes || '',
     isStretch: data.isStretch || false
@@ -209,7 +217,12 @@ function addInitiative(data = {}) {
 
 function updateInitiative(id, patch) {
   const init = state.initiatives.find(x => x.id === id);
-  if (init) Object.assign(init, patch);
+  if (!init) return;
+  Object.assign(init, patch);
+  // Auto-recalculate effortDays from roleEfforts unless explicitly patched
+  if (patch.roleEfforts !== undefined && patch.effortDays === undefined) {
+    init.effortDays = _sumRoleEfforts(init.roleEfforts);
+  }
   save();
 }
 
