@@ -645,7 +645,7 @@ function renderSummary() {
   const el = document.getElementById('team-gauge');
   if (el) gauge.render(el, committed, total);
   const sumEl = document.getElementById('team-total');
-  if (sumEl) sumEl.textContent = `Total: ${store.getTeam().length} members · ${total} person-days available`;
+  if (sumEl) sumEl.textContent = `Total: ${store.getTeam().length} members`;
 }
 
 function esc(s) {
