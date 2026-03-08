@@ -493,6 +493,36 @@ tr:hover .drag-handle { opacity: 1; }
 
 .empty-hint { color: var(--text-muted); font-size: .85rem; padding: .5rem .25rem; font-style: italic; }
 
+/* ── Per-role capacity gauge ─────────────────────────────────── */
+.role-gauge-grid {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  padding: .75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1.25rem;
+}
+.role-gauge-row {
+  display: grid;
+  grid-template-columns: 72px 1fr 36px 10px 36px 80px;
+  align-items: center;
+  gap: .5rem;
+}
+.role-gauge-name {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.role-gauge-bar { margin: 0; height: 6px; }
+.role-gauge-committed { font-size: .75rem; font-weight: 600; text-align: right; }
+.role-gauge-sep { font-size: .72rem; color: var(--text-muted); text-align: center; }
+.role-gauge-capacity { font-size: .72rem; color: var(--text-muted); }
+.role-gauge-remaining { font-size: .72rem; font-weight: 500; }
+
 /* ── Per-role effort grid (Step 3) ───────────────────────────── */
 .role-effort-row {
   display: flex;

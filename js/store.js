@@ -240,6 +240,25 @@ function committedEffort() {
     .reduce((s, i) => s + i.effortDays, 0);
 }
 
+function capacityByRole() {
+  const out = {};
+  ROLES.forEach(r => { out[r] = 0; });
+  state.team.forEach(m => {
+    const r = m.role;
+    if (out[r] !== undefined) out[r] += m.personDays;
+  });
+  return out;
+}
+
+function committedEffortByRole() {
+  const out = {};
+  ROLES.forEach(r => { out[r] = 0; });
+  state.initiatives.filter(i => !i.isStretch).forEach(i => {
+    ROLES.forEach(r => { out[r] += Number(i.roleEfforts?.[r] || 0); });
+  });
+  return out;
+}
+
 // ── Scores ──────────────────────────────────────────────────────────────────
 
 function getScores() { return state.scores; }
@@ -345,8 +364,8 @@ export {
   load, save, getState,
   setQuarterLabel, setCurrentStep,
   getMissions, setMissions, addMission, updateMission, deleteMission,
-  getTeam, addTeamMember, updateTeamMember, deleteTeamMember, totalCapacity,
-  getInitiatives, getInitiativesByMission, addInitiative, updateInitiative, deleteInitiative, committedEffort,
+  getTeam, addTeamMember, updateTeamMember, deleteTeamMember, totalCapacity, capacityByRole,
+  getInitiatives, getInitiativesByMission, addInitiative, updateInitiative, deleteInitiative, committedEffort, committedEffortByRole,
   getScores, getScore, updateScore, reorderScores,
   getTimeline, ensureTimelineEntry, updateTimeline, addMilestone, removeMilestone,
   getSettings, updateSettings,

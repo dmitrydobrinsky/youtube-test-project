@@ -3,7 +3,7 @@
 import * as store from '../store.js';
 import * as wizard from '../wizard.js';
 import * as modal from '../components/modal.js';
-import * as gauge from '../components/capacity-gauge.js';
+import { renderByRole } from '../components/capacity-gauge.js';
 
 const ROLES = ['Algo', 'Data', 'BI', 'Fullstack', 'DevOps'];
 const TARGETS = ['H1', 'H2', 'Full', 'Stretch'];
@@ -232,7 +232,7 @@ function bindEvents() {
 
 function renderGauge() {
   const el = document.getElementById('breakdown-gauge');
-  if (el) gauge.render(el, store.committedEffort(), store.totalCapacity());
+  if (el) renderByRole(el, store.committedEffortByRole(), store.capacityByRole());
 }
 
 function esc(s) {
