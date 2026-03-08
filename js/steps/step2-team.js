@@ -557,6 +557,11 @@ function openMemberDetail(memberId) {
 
       ${buildWeekdayPicker(m)}
 
+      <label class="form-label" style="margin-top:1rem">National Holidays</label>
+      <input id="detail-holidays" class="form-input" type="number" min="0"
+        style="width:100px;margin-bottom:1.25rem"
+        placeholder="0" value="${m.holidayDays ?? ''}">
+
       <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:1.25rem">
         <button class="btn btn-ghost" id="detail-cancel">Cancel</button>
         <button class="btn btn-primary" id="detail-save">Save</button>
@@ -582,17 +587,19 @@ function openMemberDetail(memberId) {
 
   document.getElementById('detail-cancel').addEventListener('click', () => modal.close());
   document.getElementById('detail-save').addEventListener('click', () => {
-    const country  = document.getElementById('detail-country').value.trim();
-    const weekDays = [...document.querySelectorAll('.wd-pill.active')].map(p => parseInt(p.dataset.dow));
-    const patch = { country, weekDays };
+    const country     = document.getElementById('detail-country').value.trim();
+    const weekDays    = [...document.querySelectorAll('.wd-pill.active')].map(p => parseInt(p.dataset.dow));
+    const holidayDays = Math.max(0, parseInt(document.getElementById('detail-holidays').value) || 0);
+    const patch = { country, weekDays, holidayDays };
 
     if (range) {
       const workSet = new Set(weekDays);
       const totalWorkingDays = countWorkingDays(range.start, range.end, workSet);
+      const netDays = Math.max(0, totalWorkingDays - holidayDays - (m.vacationDays || 0) - (m.reserveDays || 0));
       Object.assign(patch, {
-        workingDays:    totalWorkingDays,
-        personDays:     Math.round(totalWorkingDays * m.capacityPct / 100),
-        availableWeeks: parseFloat((totalWorkingDays / 5).toFixed(1))
+        workingDays:    totalWorkingDays - holidayDays,
+        personDays:     Math.round(netDays * m.capacityPct / 100),
+        availableWeeks: parseFloat((netDays / 5).toFixed(1))
       });
     }
 
