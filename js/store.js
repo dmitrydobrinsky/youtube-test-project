@@ -138,6 +138,7 @@ function addTeamMember(data = {}) {
     email: data.email || '',
     country: data.country || '',
     shapesId: data.shapesId || null,
+    profilePicture: data.profilePicture || null,
     capacityPct: cap,
     availableWeeks: weeks,
     personDays: Math.round(cap / 100 * weeks * 5),

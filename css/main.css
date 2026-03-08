@@ -257,6 +257,34 @@ textarea.tbl-input, textarea.form-input { resize: vertical; min-height: 2.5rem; 
 /* ── dot color indicator ─────────────────────────────────────── */
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: .4rem; flex-shrink: 0; }
 
+/* ── Member avatar ───────────────────────────────────────────── */
+.member-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+  color: #fff;
+  flex-shrink: 0;
+  user-select: none;
+}
+.member-avatar img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.name-cell {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+}
+.name-cell-text { flex: 1; min-width: 0; }
+
 /* ── Modal ───────────────────────────────────────────────────── */
 #modal-overlay {
   display: none;

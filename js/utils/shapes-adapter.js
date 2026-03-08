@@ -44,6 +44,7 @@ export async function fetchEmployees(accessToken) {
             lastName
             email
             workStatus
+            profilePicture
             employeeFieldValues {
               textValue
               fieldValue
@@ -113,14 +114,15 @@ function normaliseEmployee(emp, idToName = {}) {
   const country  = getText('country');
 
   return {
-    name:        `${emp.firstName} ${emp.lastName}`.trim(),
-    email:       emp.email || '',
+    name:           `${emp.firstName} ${emp.lastName}`.trim(),
+    email:          emp.email || '',
     jobTitle,
     team,
     country,
-    role:        inferRole(jobTitle, team),
-    workStatus:  emp.workStatus || 'active',
-    shapesId:    emp.id,
+    role:           inferRole(jobTitle, team),
+    workStatus:     emp.workStatus || 'active',
+    shapesId:       emp.id,
+    profilePicture: emp.profilePicture || null,
     managerId,
     managerName
   };
