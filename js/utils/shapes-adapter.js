@@ -122,7 +122,7 @@ function normaliseEmployee(emp, idToName = {}) {
     role:           inferRole(jobTitle, team),
     workStatus:     emp.workStatus || 'active',
     shapesId:       emp.id,
-    profilePicture: emp.profilePicture || null,
+    profilePicture: proxyAssetUrl(emp.profilePicture),
     managerId,
     managerName
   };
@@ -199,6 +199,15 @@ export async function fetchTimeAway(accessToken, employeeIds, startDate, endDate
   }));
 
   return { bookings, reasonCategory };
+}
+
+// Convert a Shapes protected-asset URL to the local proxy path
+// e.g. https://api.shapes.co/protected-assets/47958?preview=false
+//   → /api/shapes-asset/47958?preview=false
+function proxyAssetUrl(url) {
+  if (!url) return null;
+  const m = url.match(/protected-assets\/(.+)/);
+  return m ? `/api/shapes-asset/${m[1]}` : null;
 }
 
 function inferRole(jobTitle, team) {

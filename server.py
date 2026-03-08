@@ -14,6 +14,8 @@ import os
 PORT = 8080
 SHAPES_API = 'https://api.shapes.co/v1'
 PROXY_PATH = '/api/shapes'
+ASSET_PROXY_PATH = '/api/shapes-asset'
+SHAPES_ASSET_BASE = 'https://api.shapes.co/protected-assets/'
 
 class Handler(http.server.SimpleHTTPRequestHandler):
 
@@ -68,6 +70,40 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(json.dumps({'errors': [{'message': str(e)}]}).encode())
+
+    # ── Proxy GET /api/shapes-asset/{id} → https://api.shapes.co/protected-assets/{id}
+    def do_GET(self):
+        if not self.path.startswith(ASSET_PROXY_PATH + '/'):
+            # Fall through to static file serving
+            super().do_GET()
+            return
+
+        # Extract asset id (and optional query string)
+        rest = self.path[len(ASSET_PROXY_PATH) + 1:]  # e.g. "47958?preview=false"
+        asset_url = SHAPES_ASSET_BASE + rest
+
+        auth = self.headers.get('Authorization', '')
+        req = urllib.request.Request(asset_url, headers={'Authorization': auth} if auth else {})
+
+        try:
+            with urllib.request.urlopen(req) as resp:
+                data = resp.read()
+                content_type = resp.headers.get('Content-Type', 'image/jpeg')
+                self.send_response(200)
+                self.send_header('Content-Type', content_type)
+                self.send_header('Content-Length', str(len(data)))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Cache-Control', 'max-age=3600')
+                self.end_headers()
+                self.wfile.write(data)
+        except urllib.error.HTTPError as e:
+            self.send_response(e.code)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+        except Exception as e:
+            self.send_response(502)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
 
     # ── CORS preflight ────────────────────────────────────────────────────────
     def do_OPTIONS(self):

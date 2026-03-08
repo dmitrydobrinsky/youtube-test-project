@@ -23,6 +23,7 @@ function render() {
   bindRowEvents();
   renderSummary();
   applyTeamSearch();
+  loadShapesAvatars();
 }
 
 function applyTeamSearch() {
@@ -307,6 +308,7 @@ async function showImportPreview(employees) {
   document.getElementById('emp-search').addEventListener('input', applyFilters);
   document.getElementById('emp-team-filter').addEventListener('change', applyFilters);
   document.getElementById('emp-manager-filter').addEventListener('change', applyFilters);
+  loadShapesAvatars();
 
   // Select all (only visible rows)
   document.getElementById('select-all').addEventListener('change', e => {
@@ -558,9 +560,9 @@ function avatarHtml(name, email = '', profilePicture = null) {
   const fallback = `this.style.display='none';this.parentElement.textContent='${esc(initials)}'`;
 
   if (profilePicture) {
-    return `<div class="member-avatar" style="background:${color}" title="${esc(name)}">` +
-      `<img src="${esc(profilePicture)}" alt="${esc(initials)}" onerror="${fallback}">` +
-      `</div>`;
+    // Proxy URL requires Authorization header — JS will lazy-load it
+    return `<div class="member-avatar" style="background:${color}" title="${esc(name)}" ` +
+      `data-shapes-asset="${esc(profilePicture)}">${esc(initials)}</div>`;
   }
   if (email) {
     const hash = gravatarHash(email);
@@ -569,6 +571,29 @@ function avatarHtml(name, email = '', profilePicture = null) {
       `</div>`;
   }
   return `<div class="member-avatar" style="background:${color}" title="${esc(name)}">${esc(initials)}</div>`;
+}
+
+// Lazy-load Shapes profile pictures for all [data-shapes-asset] avatars
+async function loadShapesAvatars() {
+  const els = document.querySelectorAll('[data-shapes-asset]');
+  if (!els.length) return;
+  const token = store.getSettings().shapesAccessToken;
+  if (!token) return;
+
+  els.forEach(async el => {
+    const url = el.dataset.shapesAsset;
+    try {
+      const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!resp.ok) return;
+      const blob = await resp.blob();
+      const objUrl = URL.createObjectURL(blob);
+      const img = document.createElement('img');
+      img.src = objUrl;
+      img.alt = el.textContent.trim();
+      img.onload  = () => { el.textContent = ''; el.appendChild(img); };
+      img.onerror = () => URL.revokeObjectURL(objUrl);
+    } catch { /* keep initials */ }
+  });
 }
 
 // Simple MD5 implementation for Gravatar (RFC 1321)
