@@ -366,7 +366,7 @@ tr:hover .drag-handle { opacity: 1; }
   border-radius: var(--radius);
   box-shadow: var(--shadow), 0 0 0 1px rgba(99,102,241,.1);
   width: 90%;
-  max-width: 560px;
+  max-width: 680px;
   max-height: 90vh;
   overflow-y: auto;
   animation: modalIn .2s cubic-bezier(.4,0,.2,1);

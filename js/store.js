@@ -146,7 +146,8 @@ function addTeamMember(data = {}) {
     workingDays: data.workingDays ?? null,    // total working days in quarter
     holidayDays: data.holidayDays ?? null,    // public holidays
     vacationDays: data.vacationDays ?? null,  // planned time away
-    reserveDays: data.reserveDays ?? null     // military reserve duty
+    reserveDays: data.reserveDays ?? null,    // military reserve duty
+    daysOff: data.daysOff ?? []              // manually unchecked dates ['YYYY-MM-DD',...]
   };
   state.team.push(m);
   save();

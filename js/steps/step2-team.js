@@ -42,7 +42,9 @@ function memberRow(m) {
     <tr data-id="${m.id}">
       <td>
         <div class="name-cell">
-          ${avatarHtml(m.name, m.email, m.profilePicture)}
+          <div class="member-avatar-btn" data-member-id="${m.id}" style="cursor:pointer" title="View details">
+            ${avatarHtml(m.name, m.email, m.profilePicture)}
+          </div>
           <div class="name-cell-text">
             <input class="tbl-input" data-field="name" value="${esc(m.name)}">
             ${subtitle ? `<div style="font-size:.72rem;color:var(--text-muted);padding-left:.4rem">${esc(subtitle)}</div>` : ''}
@@ -519,6 +521,10 @@ function bindRowEvents() {
     });
   });
 
+  tbody.querySelectorAll('.member-avatar-btn').forEach(btn => {
+    btn.addEventListener('click', e => openMemberDetail(e.currentTarget.dataset.memberId));
+  });
+
   tbody.querySelectorAll('.del-btn').forEach(btn => {
     btn.addEventListener('click', async e => {
       const row = e.target.closest('tr');
@@ -527,6 +533,156 @@ function bindRowEvents() {
       if (ok) { store.deleteTeamMember(id); render(); }
     });
   });
+}
+
+// ── Member detail modal ───────────────────────────────────────────────────────
+
+function openMemberDetail(memberId) {
+  const m = store.getTeam().find(x => x.id === memberId);
+  if (!m) return;
+
+  const quarterLabel = store.getState().meta.quarterLabel;
+  const range = quarterToDateRange(quarterLabel);
+
+  modal.open({
+    title: m.name || 'Team Member',
+    html: `
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem">
+        ${avatarHtml(m.name, m.email, m.profilePicture)}
+        <div>
+          <div style="font-weight:600">${esc(m.name)}</div>
+          <div style="font-size:.8rem;color:var(--text-muted)">${esc([m.role, m.team].filter(Boolean).join(' · '))}</div>
+        </div>
+      </div>
+
+      <label class="form-label">Country</label>
+      <input id="detail-country" class="form-input" style="margin-bottom:1.25rem"
+        placeholder="e.g. Israel" value="${esc(m.country || '')}">
+
+      ${range ? buildCalendar(m, range) : '<p style="color:var(--text-muted);font-size:.85rem">Set a quarter in Step 1 to see the working days calendar.</p>'}
+
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:1.25rem">
+        <button class="btn btn-ghost" id="detail-cancel">Cancel</button>
+        <button class="btn btn-primary" id="detail-save">Save</button>
+      </div>`
+  });
+
+  // Live counter
+  document.getElementById('modal-body').addEventListener('change', e => {
+    if (!e.target.classList.contains('wd-check')) return;
+    const total   = document.querySelectorAll('.wd-check').length;
+    const checked = document.querySelectorAll('.wd-check:checked').length;
+    const el = document.getElementById('cal-summary');
+    if (el) el.textContent = `${checked} / ${total} days selected`;
+  });
+
+  document.getElementById('detail-cancel').addEventListener('click', () => modal.close());
+  document.getElementById('detail-save').addEventListener('click', () => {
+    const country = document.getElementById('detail-country').value.trim();
+    const daysOff = [...document.querySelectorAll('.wd-check:not(:checked)')]
+      .map(cb => cb.dataset.date);
+
+    const patch = { country, daysOff };
+
+    // Recalculate personDays from checked boxes
+    if (range) {
+      const totalChecked = document.querySelectorAll('.wd-check:checked').length;
+      const personDays = Math.round(totalChecked * m.capacityPct / 100);
+      const unchecked  = daysOff.length;
+      Object.assign(patch, {
+        personDays,
+        workingDays:  totalChecked,
+        availableWeeks: parseFloat((totalChecked / 5).toFixed(1))
+      });
+    }
+
+    store.updateTeamMember(memberId, patch);
+    modal.close();
+    render();
+  });
+}
+
+function buildCalendar(m, range) {
+  const startISO = range.start.toISOString().slice(0, 10);
+  const endISO   = range.end.toISOString().slice(0, 10);
+  const daysOff  = new Set(m.daysOff || []);
+
+  // Group weekdays by month
+  const months = {};
+  const cur = new Date(startISO + 'T00:00:00Z');
+  const last = new Date(endISO  + 'T00:00:00Z');
+
+  while (cur <= last) {
+    const dow = cur.getUTCDay();
+    if (dow !== 0 && dow !== 6) {
+      const iso = cur.toISOString().slice(0, 10);
+      const key = iso.slice(0, 7); // YYYY-MM
+      if (!months[key]) months[key] = [];
+      months[key].push(iso);
+    }
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+
+  const DAY_NAMES = ['Mo','Tu','We','Th','Fr'];
+
+  const monthBlocks = Object.entries(months).map(([ym, days]) => {
+    const [y, mo] = ym.split('-');
+    const label = new Date(Date.UTC(+y, +mo - 1, 1))
+      .toLocaleString('default', { month: 'long', year: 'numeric' });
+
+    // Build week rows
+    const weeks = [];
+    let week = [];
+    days.forEach(iso => {
+      const dow = new Date(iso + 'T00:00:00Z').getUTCDay(); // 1=Mon..5=Fri
+      if (week.length === 0) {
+        // pad start
+        for (let d = 1; d < dow; d++) week.push(null);
+      }
+      week.push(iso);
+      if (dow === 5) { weeks.push(week); week = []; }
+    });
+    if (week.length) weeks.push(week);
+
+    const rows = weeks.map(wk => {
+      const cells = [];
+      for (let d = 0; d < 5; d++) {
+        const iso = wk[d];
+        if (!iso) { cells.push('<td></td>'); continue; }
+        const off = daysOff.has(iso);
+        const dd  = iso.slice(8);
+        cells.push(`<td style="padding:.15rem .2rem;text-align:center">
+          <label style="display:flex;flex-direction:column;align-items:center;gap:.1rem;cursor:pointer;font-size:.68rem;color:var(--text-muted)">
+            <input type="checkbox" class="wd-check" data-date="${iso}" ${off ? '' : 'checked'} style="margin:0">
+            ${dd}
+          </label>
+        </td>`);
+      }
+      return `<tr>${cells.join('')}</tr>`;
+    }).join('');
+
+    return `
+      <div style="margin-bottom:.75rem">
+        <div style="font-size:.78rem;font-weight:600;color:var(--text-soft);margin-bottom:.3rem">${label}</div>
+        <table style="border-collapse:collapse">
+          <thead><tr>${DAY_NAMES.map(d => `<th style="padding:.15rem .4rem;font-size:.65rem;color:var(--text-muted);font-weight:500">${d}</th>`).join('')}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }).join('');
+
+  const totalDays = Object.values(months).flat().length;
+  const offCount  = daysOff.size;
+
+  return `
+    <label class="form-label">Working Days — ${store.getState().meta.quarterLabel}</label>
+    <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.75rem">
+      Uncheck days to mark as unavailable.
+      <span id="cal-summary" style="color:var(--accent);margin-left:.5rem">${totalDays - offCount} / ${totalDays} days selected</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:1.5rem;max-height:340px;overflow-y:auto;padding:.25rem 0" id="cal-grid">
+      ${monthBlocks}
+    </div>`;
 }
 
 function renderSummary() {
