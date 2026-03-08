@@ -449,38 +449,34 @@ async function syncHolidaysAndVacations() {
     console.log('[Sync] reasonCategory:', reasonCategory);
     bookings.forEach(b => console.log('[Booking]', b.employeeId, b.fromStr, '→', b.toStr, b.bookingStatus, 'reason:', b.timeAwayReasonId));
 
-    // Tally days per employee per category — clamp bookings to quarter window
-    const maps = { vacation: {}, holiday: {}, reserve: {} };
+    // Filter to approved bookings that overlap the quarter
+    const relevant = bookings.filter(b =>
+      ['approved', 'Approved'].includes(b.bookingStatus) &&
+      b.fromStr && b.toStr &&
+      b.fromStr <= endISO && b.toStr >= startISO
+    );
 
-    bookings
-      .filter(b => {
-        if (!['approved', 'Approved'].includes(b.bookingStatus)) return false;
-        if (!b.fromStr || !b.toStr) return false;
-        return b.fromStr <= endISO && b.toStr >= startISO;
-      })
-      .forEach(b => {
+    // Update each team member using their own working-week schedule
+    team.forEach(m => {
+      const id        = String(m.shapesId);
+      const workSet   = new Set(m.weekDays ?? defaultWeekDays(m.country));
+      const totalWorkingDays = countWorkingDays(range.start, range.end, workSet);
+
+      let holidayDays = 0, vacationDays = 0, reserveDays = 0;
+      relevant.filter(b => String(b.employeeId) === id).forEach(b => {
         const from = clampDate(b.fromStr, startISO, endISO);
         const to   = clampDate(b.toStr,   startISO, endISO);
-        const days = countWorkingDays(from, to);
+        const days = countWorkingDays(from, to, workSet);
         const cat  = reasonCategory[b.timeAwayReasonId] || 'vacation';
-        const id   = String(b.employeeId);
-        maps[cat][id] = (maps[cat][id] || 0) + days;
+        if (cat === 'holiday')      holidayDays  += days;
+        else if (cat === 'vacation') vacationDays += days;
+        else if (cat === 'reserve')  reserveDays  += days;
         console.log('[Sync] mapped:', id, cat, from, '→', to, '=', days, 'days');
       });
 
-    // Total working days in the quarter (Mon–Fri, no adjustments)
-    const totalWorkingDays = countWorkingDays(range.start, range.end);
-    console.log('[Sync] totalWorkingDays:', totalWorkingDays);
-
-    // Update each team member
-    team.forEach(m => {
-      const id          = String(m.shapesId);
-      const holidayDays  = maps.holiday[id]  || 0;
-      const vacationDays = maps.vacation[id] || 0;
-      const reserveDays  = maps.reserve[id]  || 0;
-      const workingDays  = totalWorkingDays - holidayDays;
-      const netDays      = Math.max(0, workingDays - vacationDays - reserveDays);
-      const personDays   = Math.round(netDays * m.capacityPct / 100);
+      const workingDays = totalWorkingDays - holidayDays;
+      const netDays     = Math.max(0, workingDays - vacationDays - reserveDays);
+      const personDays  = Math.round(netDays * m.capacityPct / 100);
 
       console.log(`[Sync] ${m.name} | shapesId:${id} | working:${workingDays} holiday:${holidayDays} vacation:${vacationDays} reserve:${reserveDays} net:${netDays} → ${personDays}d`);
 
@@ -559,7 +555,7 @@ function openMemberDetail(memberId) {
       <input id="detail-country" class="form-input" style="margin-bottom:1.25rem"
         placeholder="e.g. Israel" value="${esc(m.country || '')}">
 
-      ${range ? buildCalendar(m, range) : '<p style="color:var(--text-muted);font-size:.85rem">Set a quarter in Step 1 to see the working days calendar.</p>'}
+      ${buildWeekdayPicker(m)}
 
       <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:1.25rem">
         <button class="btn btn-ghost" id="detail-cancel">Cancel</button>
@@ -567,32 +563,36 @@ function openMemberDetail(memberId) {
       </div>`
   });
 
-  // Live counter
-  document.getElementById('modal-body').addEventListener('change', e => {
-    if (!e.target.classList.contains('wd-check')) return;
-    const total   = document.querySelectorAll('.wd-check').length;
-    const checked = document.querySelectorAll('.wd-check:checked').length;
-    const el = document.getElementById('cal-summary');
-    if (el) el.textContent = `${checked} / ${total} days selected`;
+  // Auto-update pills when country is typed
+  document.getElementById('detail-country').addEventListener('input', e => {
+    const days = new Set(defaultWeekDays(e.target.value));
+    document.querySelectorAll('.wd-pill').forEach(p => {
+      p.classList.toggle('active', days.has(parseInt(p.dataset.dow)));
+    });
+    _updateWeekdaySummary();
+  });
+
+  // Toggle individual day pill
+  document.getElementById('weekday-picker').addEventListener('click', e => {
+    const pill = e.target.closest('.wd-pill');
+    if (!pill) return;
+    pill.classList.toggle('active');
+    _updateWeekdaySummary();
   });
 
   document.getElementById('detail-cancel').addEventListener('click', () => modal.close());
   document.getElementById('detail-save').addEventListener('click', () => {
-    const country = document.getElementById('detail-country').value.trim();
-    const daysOff = [...document.querySelectorAll('.wd-check:not(:checked)')]
-      .map(cb => cb.dataset.date);
+    const country  = document.getElementById('detail-country').value.trim();
+    const weekDays = [...document.querySelectorAll('.wd-pill.active')].map(p => parseInt(p.dataset.dow));
+    const patch = { country, weekDays };
 
-    const patch = { country, daysOff };
-
-    // Recalculate personDays from checked boxes
     if (range) {
-      const totalChecked = document.querySelectorAll('.wd-check:checked').length;
-      const personDays = Math.round(totalChecked * m.capacityPct / 100);
-      const unchecked  = daysOff.length;
+      const workSet = new Set(weekDays);
+      const totalWorkingDays = countWorkingDays(range.start, range.end, workSet);
       Object.assign(patch, {
-        personDays,
-        workingDays:  totalChecked,
-        availableWeeks: parseFloat((totalChecked / 5).toFixed(1))
+        workingDays:    totalWorkingDays,
+        personDays:     Math.round(totalWorkingDays * m.capacityPct / 100),
+        availableWeeks: parseFloat((totalWorkingDays / 5).toFixed(1))
       });
     }
 
@@ -602,96 +602,41 @@ function openMemberDetail(memberId) {
   });
 }
 
+function _updateWeekdaySummary() {
+  const count = document.querySelectorAll('.wd-pill.active').length;
+  const el = document.getElementById('weekday-summary');
+  if (el) el.textContent = `${count} days / week`;
+}
+
 function isIsrael(country) {
   return /^(israel|il)$/i.test((country || '').trim());
 }
 
-function buildCalendar(m, range) {
-  const startISO = range.start.toISOString().slice(0, 10);
-  const endISO   = range.end.toISOString().slice(0, 10);
-  const daysOff  = new Set(m.daysOff || []);
+function defaultWeekDays(country) {
+  return isIsrael(country) ? [0,1,2,3,4] : [1,2,3,4,5];
+}
 
-  // Israel: Sun–Thu (0–4); standard: Mon–Fri (1–5)
-  const il         = isIsrael(m.country);
-  const workDays   = il ? new Set([0,1,2,3,4]) : new Set([1,2,3,4,5]);
-  const weekStart  = il ? 0 : 1;   // 0=Sun, 1=Mon
-  const weekEnd    = il ? 4 : 5;   // 4=Thu, 5=Fri
-  const DAY_NAMES  = il ? ['Su','Mo','Tu','We','Th'] : ['Mo','Tu','We','Th','Fr'];
+const ALL_DAYS = [
+  { dow: 0, label: 'Sun' },
+  { dow: 1, label: 'Mon' },
+  { dow: 2, label: 'Tue' },
+  { dow: 3, label: 'Wed' },
+  { dow: 4, label: 'Thu' },
+  { dow: 5, label: 'Fri' },
+  { dow: 6, label: 'Sat' },
+];
 
-  // Group working days by month
-  const months = {};
-  const cur = new Date(startISO + 'T00:00:00Z');
-  const last = new Date(endISO  + 'T00:00:00Z');
-
-  while (cur <= last) {
-    const dow = cur.getUTCDay();
-    if (workDays.has(dow)) {
-      const iso = cur.toISOString().slice(0, 10);
-      const key = iso.slice(0, 7);
-      if (!months[key]) months[key] = [];
-      months[key].push(iso);
-    }
-    cur.setUTCDate(cur.getUTCDate() + 1);
-  }
-
-  const monthBlocks = Object.entries(months).map(([ym, days]) => {
-    const [y, mo] = ym.split('-');
-    const label = new Date(Date.UTC(+y, +mo - 1, 1))
-      .toLocaleString('default', { month: 'long', year: 'numeric' });
-
-    // Build week rows — pad first row relative to weekStart
-    const weeks = [];
-    let week = [];
-    days.forEach(iso => {
-      const dow = new Date(iso + 'T00:00:00Z').getUTCDay();
-      if (week.length === 0) {
-        const offset = (dow - weekStart + 7) % 7;
-        for (let i = 0; i < offset; i++) week.push(null);
-      }
-      week.push(iso);
-      if (dow === weekEnd) { weeks.push(week); week = []; }
-    });
-    if (week.length) weeks.push(week);
-
-    const rows = weeks.map(wk => {
-      const cells = [];
-      for (let d = 0; d < 5; d++) {
-        const iso = wk[d];
-        if (!iso) { cells.push('<td></td>'); continue; }
-        const off = daysOff.has(iso);
-        const dd  = iso.slice(8);
-        cells.push(`<td style="padding:.15rem .2rem;text-align:center">
-          <label style="display:flex;flex-direction:column;align-items:center;gap:.1rem;cursor:pointer;font-size:.68rem;color:var(--text-muted)">
-            <input type="checkbox" class="wd-check" data-date="${iso}" ${off ? '' : 'checked'} style="margin:0">
-            ${dd}
-          </label>
-        </td>`);
-      }
-      return `<tr>${cells.join('')}</tr>`;
-    }).join('');
-
-    return `
-      <div style="margin-bottom:.75rem">
-        <div style="font-size:.78rem;font-weight:600;color:var(--text-soft);margin-bottom:.3rem">${label}</div>
-        <table style="border-collapse:collapse">
-          <thead><tr>${DAY_NAMES.map(d => `<th style="padding:.15rem .4rem;font-size:.65rem;color:var(--text-muted);font-weight:500">${d}</th>`).join('')}</tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`;
-  }).join('');
-
-  const totalDays = Object.values(months).flat().length;
-  const offCount  = daysOff.size;
-
+function buildWeekdayPicker(m) {
+  const active = new Set(m.weekDays ?? defaultWeekDays(m.country));
+  const pills = ALL_DAYS.map(({ dow, label }) =>
+    `<button type="button" class="wd-pill${active.has(dow) ? ' active' : ''}" data-dow="${dow}">${label}</button>`
+  ).join('');
   return `
-    <label class="form-label">Working Days — ${store.getState().meta.quarterLabel}</label>
-    <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.75rem">
-      Uncheck days to mark as unavailable.
-      <span id="cal-summary" style="color:var(--accent);margin-left:.5rem">${totalDays - offCount} / ${totalDays} days selected</span>
+    <label class="form-label">Working Days / Week</label>
+    <div id="weekday-picker" style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.5rem">
+      ${pills}
     </div>
-    <div style="display:flex;flex-wrap:wrap;gap:1.5rem;max-height:340px;overflow-y:auto;padding:.25rem 0" id="cal-grid">
-      ${monthBlocks}
-    </div>`;
+    <div id="weekday-summary" style="font-size:.78rem;color:var(--text-muted)">${active.size} days / week</div>`;
 }
 
 function renderSummary() {

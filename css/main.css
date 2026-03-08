@@ -528,6 +528,26 @@ tr:hover .drag-handle { opacity: 1; }
 .pd-cap  span:last-child { color: var(--accent); }
 .pd-tooltip-divider { border-top: 1px solid var(--border); margin: .3rem 0; }
 
+/* ── Weekday picker pills ────────────────────────────────────── */
+.wd-pill {
+  padding: .3rem .6rem;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: .8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.wd-pill.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+.wd-pill:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+
 /* ── Per-role capacity gauge ─────────────────────────────────── */
 .role-gauge-grid {
   display: flex;

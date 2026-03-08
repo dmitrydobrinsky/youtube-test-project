@@ -43,20 +43,19 @@ export async function fetchHolidays(countryCode, year) {
   }
 }
 
-// Count working days (Mon–Fri) between two 'YYYY-MM-DD' strings or Date objects (inclusive)
-export function countWorkingDays(start, end, holidayDates = new Set()) {
-  // Normalise to 'YYYY-MM-DD' strings to avoid timezone shifts
+// Count working days between two 'YYYY-MM-DD' strings or Date objects (inclusive)
+// workDays: Set of day-of-week numbers to count (0=Sun … 6=Sat), default Mon–Fri
+export function countWorkingDays(start, end, workDays = new Set([1,2,3,4,5]), holidayDates = new Set()) {
   const startStr = typeof start === 'string' ? start : start.toISOString().slice(0, 10);
   const endStr   = typeof end   === 'string' ? end   : end.toISOString().slice(0, 10);
 
   let count = 0;
-  // Walk day-by-day using UTC dates built from the string
-  const cur = new Date(startStr + 'T00:00:00Z');
-  const last = new Date(endStr  + 'T00:00:00Z');
+  const cur  = new Date(startStr + 'T00:00:00Z');
+  const last = new Date(endStr   + 'T00:00:00Z');
 
   while (cur <= last) {
     const dow = cur.getUTCDay();
-    if (dow !== 0 && dow !== 6) {
+    if (workDays.has(dow)) {
       const iso = cur.toISOString().slice(0, 10);
       if (!holidayDates.has(iso)) count++;
     }
