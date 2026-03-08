@@ -118,7 +118,7 @@ function normaliseEmployee(emp, idToName = {}) {
 
   const jobTitle = getText('job');
   const team     = getText('team');
-  const country  = getText('country');
+  const country  = getText('office') || getText('country');
 
   // Profile picture is stored as a protected asset ID in employeeFieldValues
   const picField = getRaw('employee_profile_picture');
