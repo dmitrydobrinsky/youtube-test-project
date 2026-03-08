@@ -55,6 +55,7 @@ export async function fetchEmployees(accessToken) {
                 context
                 fieldType
                 fieldName
+                label
               }
             }
           }
@@ -91,8 +92,16 @@ function normaliseEmployee(emp, idToName = {}) {
     return fields.find(fv => fv.employeeFieldType?.context === context) || null;
   };
 
-  const getText = (context) => {
-    const f = getRaw(context);
+  // Also search by fieldName or label (case-insensitive) for fields whose context key is unknown
+  const getRawByName = (name) => {
+    const lc = name.toLowerCase();
+    return fields.find(fv =>
+      fv.employeeFieldType?.fieldName?.toLowerCase() === lc ||
+      fv.employeeFieldType?.label?.toLowerCase() === lc
+    ) || null;
+  };
+
+  const extractText = (f) => {
     if (!f) return '';
     if (f.textValue) return f.textValue;
     const v = f.fieldValue;
@@ -101,6 +110,9 @@ function normaliseEmployee(emp, idToName = {}) {
     if (typeof v === 'object' && v !== null) return Object.values(v)[0] || '';
     return String(v ?? '');
   };
+
+  const getText = (context) => extractText(getRaw(context));
+  const getTextByName = (name) => extractText(getRawByName(name));
 
   // reports_to fieldValue is typically an employee ID (number or string)
   const reportsToRaw = getRaw('reports_to');
@@ -118,7 +130,7 @@ function normaliseEmployee(emp, idToName = {}) {
 
   const jobTitle = getText('job');
   const team     = getText('team');
-  const country  = getText('office') || getText('country');
+  const country  = getText('office') || getTextByName('office') || getText('country');
 
   // Profile picture is stored as a protected asset ID in employeeFieldValues
   const picField = getRaw('employee_profile_picture');
