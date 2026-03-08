@@ -18,7 +18,11 @@ export async function refreshAccessToken(refreshToken) {
     })
   });
 
-  if (!res.ok) throw new Error(`Refresh failed: ${res.status}`);
+  if (!res.ok) {
+    let detail = '';
+    try { const j = await res.json(); detail = j.errors?.[0]?.message || j.message || ''; } catch {}
+    throw new Error(`Refresh failed: ${res.status}${detail ? ' — ' + detail : ''}`);
+  }
   const json = await res.json();
   if (json.errors) throw new Error(json.errors[0].message);
 
@@ -59,7 +63,11 @@ export async function fetchEmployees(accessToken) {
     })
   });
 
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (!res.ok) {
+    let detail = '';
+    try { const j = await res.json(); detail = (j.errors || j.message) ? JSON.stringify(j.errors || j.message) : ''; } catch {}
+    throw new Error(`API error: ${res.status}${detail ? ' — ' + detail : ''}`);
+  }
   const json = await res.json();
   if (json.errors) throw new Error(json.errors.map(e => e.message).join(', '));
 
