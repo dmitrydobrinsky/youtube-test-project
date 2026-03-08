@@ -13,6 +13,9 @@ export function init() {
   document.addEventListener('stepchange', e => { if (e.detail.step === 3) render(); });
 }
 
+// Remember which missions are collapsed across re-renders
+const collapsedMissions = new Set();
+
 function render() {
   const missions = store.getMissions();
   const container = document.getElementById('breakdown-missions');
@@ -36,21 +39,24 @@ function missionBlock(mission) {
   const ownerOpts = [{ id: '', name: '—' }, ...team]
     .map(m => `<option value="${m.id}" ${mission.ownerId === m.id ? 'selected' : ''}>${esc(m.name || '—')}</option>`)
     .join('');
+  const hasTasks = initiatives.length > 0;
+  const collapsed = collapsedMissions.has(mission.id);
   return `
     <div class="mission-block" data-mission-id="${mission.id}">
       <div class="mission-header" style="border-left:4px solid ${color}">
+        ${hasTasks ? `<button class="collapse-btn icon-btn" data-mission-id="${mission.id}" title="${collapsed ? 'Expand' : 'Collapse'}" style="font-size:.85rem;padding:.2rem .35rem;opacity:.7">${collapsed ? '▶' : '▼'}</button>` : '<span style="width:24px;flex-shrink:0"></span>'}
         <span class="mission-title">${esc(mission.title)}</span>
         <label style="display:flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--text-muted);margin-left:.75rem">
           Owner:
           <select class="tbl-input tbl-select mission-owner-select" data-mission-id="${mission.id}" style="font-size:.78rem;padding:.25rem .5rem">${ownerOpts}</select>
         </label>
         <div style="flex:1"></div>
-        ${total ? `<span class="mission-total-label" style="font-size:.78rem;color:var(--text-muted);margin-right:.75rem">${total} days total</span>` : '<span class="mission-total-label" style="font-size:.78rem;color:var(--text-muted);margin-right:.75rem"></span>'}
+        <span class="mission-total-label" style="font-size:.78rem;color:var(--text-muted);margin-right:.75rem">${total ? total + ' days total' : ''}</span>
         <button class="btn btn-sm btn-primary add-init-btn" data-mission="${mission.id}">+ Add Task</button>
       </div>
-      <div class="initiatives-list" id="inits-${mission.id}">
+      <div class="initiatives-list" id="inits-${mission.id}" ${collapsed ? 'style="display:none"' : ''}>
         ${initiatives.map(i => initiativeRow(i)).join('')}
-        ${!initiatives.length ? '<p class="empty-hint">No tasks yet. Click "+ Add Task" to start.</p>' : ''}
+        ${!hasTasks ? '<p class="empty-hint">No tasks yet. Click "+ Add Task" to start.</p>' : ''}
       </div>
     </div>`;
 }
@@ -100,6 +106,25 @@ function initiativeRow(init) {
 
 function bindEvents() {
   const container = document.getElementById('breakdown-missions');
+
+  // Collapse / expand
+  container.querySelectorAll('.collapse-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const id = e.currentTarget.dataset.missionId;
+      const list = document.getElementById(`inits-${id}`);
+      if (collapsedMissions.has(id)) {
+        collapsedMissions.delete(id);
+        list.style.display = '';
+        e.currentTarget.textContent = '▼';
+        e.currentTarget.title = 'Collapse';
+      } else {
+        collapsedMissions.add(id);
+        list.style.display = 'none';
+        e.currentTarget.textContent = '▶';
+        e.currentTarget.title = 'Expand';
+      }
+    });
+  });
 
   // Mission owner
   container.querySelectorAll('.mission-owner-select').forEach(sel => {
