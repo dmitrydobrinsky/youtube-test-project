@@ -79,26 +79,7 @@ export async function fetchEmployees(accessToken) {
     idToName[emp.id] = `${emp.firstName} ${emp.lastName}`.trim();
   });
 
-  const normalised = raw.map(emp => normaliseEmployee(emp, idToName));
-
-  // Fetch profile pictures in parallel while the token is fresh
-  await Promise.all(normalised.map(async emp => {
-    if (!emp.profilePicture) return;
-    try {
-      const r = await fetch(emp.profilePicture, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      if (!r.ok) return;
-      const blob = await r.blob();
-      emp.profilePicture = await new Promise(resolve => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.readAsDataURL(blob);
-      });
-    } catch { emp.profilePicture = null; }
-  }));
-
-  return normalised;
+  return raw.map(emp => normaliseEmployee(emp, idToName));
 }
 
 // ── Normalise employee → team member ─────────────────────────────────────────
@@ -162,7 +143,7 @@ function normaliseEmployee(emp, idToName = {}) {
     role:           inferRole(jobTitle, team),
     workStatus:     emp.workStatus || 'active',
     shapesId:       emp.id,
-    profilePicture,
+    profilePicture: null,
     managerId,
     managerName
   };
