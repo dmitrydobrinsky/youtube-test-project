@@ -11,7 +11,7 @@ const DIMS = [
 ];
 
 export function init() {
-  document.addEventListener('stepchange', e => { if (e.detail.step === 4) render(); });
+  document.addEventListener('stepchange', e => { if (e.detail.step === 5) render(); });
 }
 
 function getSorted() {

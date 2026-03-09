@@ -7,7 +7,7 @@ import * as modal from '../components/modal.js';
 const WEEKS = 13;
 
 export function init() {
-  document.addEventListener('stepchange', e => { if (e.detail.step === 5) render(); });
+  document.addEventListener('stepchange', e => { if (e.detail.step === 6) render(); });
 }
 
 function getSortedInitiatives() {

@@ -6,6 +6,7 @@ import { loadFromUrl } from './utils/url-state.js';
 
 import { init as initStep1 } from './steps/step1-wishlist.js';
 import { init as initStep2 } from './steps/step2-team.js';
+import { init as initStepStart } from './steps/step-start.js';
 import { init as initStep3 } from './steps/step3-breakdown.js';
 import { init as initStep4 } from './steps/step4-priority.js';
 import { init as initStep5 } from './steps/step5-timeline.js';
@@ -25,6 +26,7 @@ function bootstrap() {
 
   initStep1();
   initStep2();
+  initStepStart();
   initStep3();
   initStep4();
   initStep5();

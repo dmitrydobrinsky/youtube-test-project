@@ -9,8 +9,8 @@ const ROLES = ['Algo', 'Data', 'BI', 'Fullstack', 'DevOps'];
 const TARGETS = ['H1', 'H2', 'Full', 'Stretch'];
 
 export function init() {
-  wizard.registerGuard(3, () => store.getInitiatives().length > 0);
-  document.addEventListener('stepchange', e => { if (e.detail.step === 3) render(); });
+  wizard.registerGuard(4, () => store.getInitiatives().length > 0);
+  document.addEventListener('stepchange', e => { if (e.detail.step === 4) render(); });
 }
 
 // Remember which missions are collapsed across re-renders

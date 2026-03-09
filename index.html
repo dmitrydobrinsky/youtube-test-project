@@ -22,11 +22,12 @@
   <h1>📅 <span class="logo-text">Quarter Planner</span> <span id="quarter-label"></span></h1>
   <nav class="wiz-tabs">
     <div class="wiz-tab active" data-step="1">1 · Team</div>
-    <div class="wiz-tab future" data-step="2">2 · Wish List</div>
-    <div class="wiz-tab future" data-step="3">3 · Breakdown</div>
-    <div class="wiz-tab future" data-step="4">4 · Prioritize</div>
-    <div class="wiz-tab future" data-step="5">5 · Timeline</div>
-    <div class="wiz-tab future" data-step="6">6 · Export</div>
+    <div class="wiz-tab future" data-step="2">2 · Setup</div>
+    <div class="wiz-tab future" data-step="3">3 · Wish List</div>
+    <div class="wiz-tab future" data-step="4">4 · Breakdown</div>
+    <div class="wiz-tab future" data-step="5">5 · Prioritize</div>
+    <div class="wiz-tab future" data-step="6">6 · Timeline</div>
+    <div class="wiz-tab future" data-step="7">7 · Export</div>
   </nav>
 </header>
 
@@ -68,16 +69,80 @@
     <p style="margin-top:.75rem;color:var(--text-muted);font-size:.8rem" id="team-total"></p>
   </section>
 
-  <!-- ── Step 2: Wish List ───────────────────────────────────────────── -->
+  <!-- ── Step 2: Planning Setup ─────────────────────────────────────── -->
   <section id="step-2" class="step-panel">
+    <h2 class="step-title">Planning Setup</h2>
+    <p class="step-desc">Choose the quarter you're planning and connect your data sources.</p>
+
+    <div class="start-section">
+      <h3 class="start-section-title">Select Quarter</h3>
+      <div id="start-quarter-cards" class="quarter-cards"></div>
+    </div>
+
+    <div class="start-connections">
+
+      <!-- Shapes.co card -->
+      <div class="connection-card">
+        <div class="connection-card-header">
+          <span class="connection-icon">🔷</span>
+          <div>
+            <div class="connection-name">Shapes.co</div>
+            <div class="connection-desc">Import team members</div>
+          </div>
+          <span id="shapes-conn-badge" class="conn-badge conn-badge--off">Not connected</span>
+        </div>
+        <div class="connection-fields">
+          <label class="form-label">Refresh Token <span style="color:var(--text-muted)">(long-lived)</span></label>
+          <input id="start-shapes-refresh" class="form-input" type="password"
+            style="font-family:monospace;font-size:.75rem" placeholder="eyJ…">
+          <label class="form-label" style="margin-top:.6rem">Access Token <span style="color:var(--text-muted)">(optional)</span></label>
+          <input id="start-shapes-access" class="form-input" type="password"
+            style="font-family:monospace;font-size:.75rem" placeholder="eyJ…">
+        </div>
+        <div style="margin-top:.75rem;display:flex;justify-content:flex-end">
+          <button class="btn btn-primary btn-sm" id="start-shapes-save">Save</button>
+        </div>
+      </div>
+
+      <!-- Jira card -->
+      <div class="connection-card">
+        <div class="connection-card-header">
+          <span class="connection-icon">🔗</span>
+          <div>
+            <div class="connection-name">Jira</div>
+            <div class="connection-desc">Import Epics as missions</div>
+          </div>
+          <span id="jira-conn-badge" class="conn-badge conn-badge--off">Not configured</span>
+        </div>
+        <div class="connection-fields">
+          <label class="form-label">Jira Domain</label>
+          <input class="form-input" value="onebeat.atlassian.net" disabled style="color:var(--text-muted)">
+          <label class="form-label" style="margin-top:.6rem">Email</label>
+          <input id="start-jira-email" class="form-input" type="email" placeholder="you@example.com">
+          <label class="form-label" style="margin-top:.6rem">
+            API Token
+            <a href="https://id.atlassian.com/manage-profile/security/api-tokens"
+              target="_blank" rel="noopener"
+              style="font-size:.75rem;margin-left:.4rem;color:var(--accent)">Get token ↗</a>
+          </label>
+          <input id="start-jira-token" class="form-input" type="password" placeholder="ATATT3x…">
+        </div>
+        <div id="start-jira-status" style="min-height:1.1rem;font-size:.82rem;margin-top:.5rem"></div>
+        <div style="margin-top:.5rem;display:flex;gap:.5rem;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" id="start-jira-test">Test Connection</button>
+          <button class="btn btn-primary btn-sm" id="start-jira-save">Save</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── Step 3: Wish List ───────────────────────────────────────────── -->
+  <section id="step-3" class="step-panel">
     <h2 class="step-title">Wish List</h2>
     <p class="step-desc">Collect missions from the Product Manager. Upload a file or add rows manually.</p>
 
     <div class="toolbar">
-      <div>
-        <label class="form-label">Quarter</label>
-        <select id="wl-quarter-label" class="form-input" style="width:140px"></select>
-      </div>
       <div style="flex:1"></div>
       <label style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;color:var(--text-muted);cursor:pointer">
         <input type="checkbox" id="wl-has-header" checked> First row is header
@@ -111,8 +176,8 @@
     <p style="margin-top:.75rem;color:var(--text-muted);font-size:.8rem" id="wl-count">0 mission(s)</p>
   </section>
 
-  <!-- ── Step 3: Breakdown ───────────────────────────────────────────── -->
-  <section id="step-3" class="step-panel">
+  <!-- ── Step 4: Breakdown ───────────────────────────────────────────── -->
+  <section id="step-4" class="step-panel">
     <h2 class="step-title">Initiative Breakdown</h2>
     <p class="step-desc">Break each mission into concrete initiatives with effort estimates.</p>
 
@@ -120,8 +185,8 @@
     <div id="breakdown-missions"></div>
   </section>
 
-  <!-- ── Step 4: Prioritization ─────────────────────────────────────── -->
-  <section id="step-4" class="step-panel">
+  <!-- ── Step 5: Prioritization ─────────────────────────────────────── -->
+  <section id="step-5" class="step-panel">
     <h2 class="step-title">Prioritization</h2>
     <p class="step-desc">Score initiatives and drag to reorder. Use ✂ to move items below the cut line.</p>
 
@@ -145,8 +210,8 @@
     </div>
   </section>
 
-  <!-- ── Step 5: Timeline ────────────────────────────────────────────── -->
-  <section id="step-5" class="step-panel">
+  <!-- ── Step 6: Timeline ────────────────────────────────────────────── -->
+  <section id="step-6" class="step-panel">
     <h2 class="step-title">Timeline</h2>
     <p class="step-desc">Click and drag across weeks to set start/end for each initiative. Click ◆ to add milestones.</p>
 
@@ -164,8 +229,8 @@
     <div id="tl-heatmap" style="margin-top:.5rem"></div>
   </section>
 
-  <!-- ── Step 6: Export ──────────────────────────────────────────────── -->
-  <section id="step-6" class="step-panel">
+  <!-- ── Step 7: Export ──────────────────────────────────────────────── -->
+  <section id="step-7" class="step-panel">
     <h2 class="step-title">Export & Share</h2>
     <p class="step-desc">Review your plan and download or share it.</p>
 

@@ -7,7 +7,7 @@ import { buildWorkbook, downloadWorkbook } from '../utils/sheetjs-adapter.js';
 import { getShareableUrl } from '../utils/url-state.js';
 
 export function init() {
-  document.addEventListener('stepchange', e => { if (e.detail.step === 6) render(); });
+  document.addEventListener('stepchange', e => { if (e.detail.step === 7) render(); });
 }
 
 function render() {

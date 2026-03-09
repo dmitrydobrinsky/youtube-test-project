@@ -11,7 +11,7 @@ import { fetchIssues } from '../utils/jira-adapter.js';
 const PRIORITIES = ['', 'High', 'Medium', 'Low'];
 
 export function init() {
-  wizard.registerGuard(2, () => store.getMissions().length > 0);
+  wizard.registerGuard(3, () => store.getMissions().length > 0);
   render();
   bindEvents();
 }
@@ -121,21 +121,9 @@ function bindEvents() {
     if (file) await handleFile(file);
   });
 
-  // Quarter selector — current quarter + next 3
-  const qlSelect = document.getElementById('wl-quarter-label');
-  if (qlSelect) {
-    const quarters = nextFourQuarters();
-    const saved = store.getState().meta.quarterLabel || quarters[0];
-    qlSelect.innerHTML = quarters.map(q =>
-      `<option value="${q}" ${q === saved ? 'selected' : ''}>${q}</option>`
-    ).join('');
-    if (!store.getState().meta.quarterLabel) store.setQuarterLabel(quarters[0]);
-    qlSelect.addEventListener('change', e => store.setQuarterLabel(e.target.value));
-  }
-
   // Re-render on step change
   document.addEventListener('stepchange', e => {
-    if (e.detail.step === 2) render();
+    if (e.detail.step === 3) render();
   });
 }
 
@@ -335,19 +323,6 @@ function openJiraModal() {
 function updateCount() {
   const el = document.getElementById('wl-count');
   if (el) el.textContent = `${store.getMissions().length} mission(s)`;
-}
-
-function nextFourQuarters() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const q = Math.ceil((now.getMonth() + 1) / 3); // current quarter (1-4)
-  const result = [];
-  for (let i = 0; i < 4; i++) {
-    let qn = q + i, yn = year;
-    if (qn > 4) { qn -= 4; yn++; }
-    result.push(`Q${qn} ${yn}`);
-  }
-  return result;
 }
 
 function esc(s) {
