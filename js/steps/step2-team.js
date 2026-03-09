@@ -10,9 +10,9 @@ import { countWorkingDays, quarterToDateRange, clampDate } from '../utils/holida
 const ROLES = ['Algo', 'Data', 'BI', 'DevOps', 'Fullstack'];
 
 export function init() {
-  wizard.registerGuard(1, () => store.getTeam().length > 0);
+  wizard.registerGuard(2, () => store.getTeam().length > 0);
   bindEvents();
-  document.addEventListener('stepchange', e => { if (e.detail.step === 1) render(); });
+  document.addEventListener('stepchange', e => { if (e.detail.step === 2) render(); });
 }
 
 function render() {

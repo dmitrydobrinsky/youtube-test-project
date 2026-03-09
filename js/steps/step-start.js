@@ -5,7 +5,7 @@ import * as store from '../store.js';
 const JIRA_DOMAIN = 'onebeat.atlassian.net';
 
 export function init() {
-  document.addEventListener('stepchange', e => { if (e.detail.step === 2) render(); });
+  document.addEventListener('stepchange', e => { if (e.detail.step === 1) render(); });
 }
 
 function render() {
