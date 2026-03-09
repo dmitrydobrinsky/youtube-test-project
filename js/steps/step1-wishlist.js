@@ -6,7 +6,6 @@ import * as sheet from '../utils/sheetjs-adapter.js';
 import { fetchFromSharedUrl } from '../utils/drive-picker.js';
 import { openMapper, applyMapping, autoMap } from '../components/column-mapper.js';
 import * as modal from '../components/modal.js';
-import { fetchIssues } from '../utils/jira-adapter.js';
 
 const PRIORITIES = ['', 'High', 'Medium', 'Low'];
 
@@ -98,9 +97,6 @@ function bindEvents() {
       }
     });
   });
-
-  // Jira import
-  document.getElementById('wl-jira-btn').addEventListener('click', () => openJiraModal());
 
   // Delete all
   document.getElementById('wl-clear-btn').addEventListener('click', async () => {
@@ -207,119 +203,6 @@ async function handleFile(file) {
     alert('Failed to parse file: ' + err.message);
   }
 }
-
-
-const JIRA_DOMAIN = 'onebeat.atlassian.net';
-
-function openJiraModal() {
-  const saved = store.getSettings();
-  const email = saved.jiraEmail || '';
-  const token = saved.jiraToken || '';
-  const jql   = saved.jiraJql   || 'project IN (10033) AND type IN (Epic) AND "Quarter[Checkboxes]" In ("Q2 2026") ORDER BY Rank ASC';
-
-  modal.open({
-    title: 'Import from Jira',
-    html: `
-      <div style="display:flex;flex-direction:column;gap:.75rem">
-        <div>
-          <label class="form-label">Jira domain</label>
-          <input class="form-input" style="width:100%;color:var(--text-muted)" value="${esc(JIRA_DOMAIN)}" disabled>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
-          <div>
-            <label class="form-label">Email</label>
-            <input id="jira-email" class="form-input" style="width:100%"
-              type="email" placeholder="you@example.com" value="${esc(email)}">
-          </div>
-          <div>
-            <label class="form-label">
-              API token
-              <a href="https://id.atlassian.com/manage-profile/security/api-tokens"
-                target="_blank" rel="noopener"
-                style="font-size:.75rem;margin-left:.4rem;color:var(--primary)">Get token ↗</a>
-            </label>
-            <input id="jira-token" class="form-input" style="width:100%"
-              type="password" placeholder="••••••••" value="${esc(token)}">
-          </div>
-        </div>
-        <div>
-          <label class="form-label">JQL query</label>
-          <input id="jira-jql" class="form-input" style="width:100%" value="${esc(jql)}">
-        </div>
-        <div id="jira-status" style="min-height:1.1rem;font-size:.82rem"></div>
-        <div id="jira-preview" style="display:none">
-          <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.4rem" id="jira-preview-count"></div>
-          <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:.5rem;font-size:.82rem" id="jira-preview-list"></div>
-        </div>
-        <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:.25rem">
-          <button class="btn btn-ghost" id="jira-cancel">Cancel</button>
-          <button class="btn btn-ghost" id="jira-fetch">Fetch Issues</button>
-          <button class="btn btn-primary" id="jira-import" style="display:none">Import</button>
-        </div>
-      </div>`
-  });
-
-  let _fetchedIssues = [];
-
-  document.getElementById('jira-cancel').addEventListener('click', () => modal.close());
-
-  document.getElementById('jira-fetch').addEventListener('click', async () => {
-    const emailVal = document.getElementById('jira-email').value.trim();
-    const tokenVal = document.getElementById('jira-token').value.trim();
-    const jqlVal   = document.getElementById('jira-jql').value.trim();
-    const statusEl = document.getElementById('jira-status');
-    const fetchBtn = document.getElementById('jira-fetch');
-
-    if (!emailVal || !tokenVal || !jqlVal) {
-      statusEl.style.color = 'var(--red)';
-      statusEl.textContent = 'Please fill in all fields.';
-      return;
-    }
-
-    fetchBtn.disabled = true;
-    fetchBtn.textContent = 'Fetching…';
-    statusEl.style.color = 'var(--text-muted)';
-    statusEl.textContent = 'Connecting to Jira…';
-    document.getElementById('jira-preview').style.display = 'none';
-    document.getElementById('jira-import').style.display = 'none';
-
-    try {
-      _fetchedIssues = await fetchIssues({ domain: JIRA_DOMAIN, email: emailVal, token: tokenVal, jql: jqlVal });
-      store.updateSettings({ jiraEmail: emailVal, jiraToken: tokenVal, jiraJql: jqlVal });
-
-      statusEl.textContent = '';
-      document.getElementById('jira-preview-count').textContent =
-        `${_fetchedIssues.length} issue${_fetchedIssues.length !== 1 ? 's' : ''} found`;
-      document.getElementById('jira-preview-list').innerHTML = _fetchedIssues
-        .map(i => `<div style="padding:.25rem 0;border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          <span style="color:var(--text-muted);margin-right:.4rem">${esc(i.key)}</span>${esc(i.title)}
-        </div>`).join('');
-      document.getElementById('jira-preview').style.display = 'block';
-      document.getElementById('jira-import').style.display = '';
-    } catch (err) {
-      statusEl.style.color = 'var(--red)';
-      statusEl.textContent = err.message;
-    } finally {
-      fetchBtn.disabled = false;
-      fetchBtn.textContent = 'Fetch Issues';
-    }
-  });
-
-  document.getElementById('jira-import').addEventListener('click', async () => {
-    if (!_fetchedIssues.length) return;
-    const existing = store.getMissions();
-    if (existing.length > 0) {
-      const ok = await modal.confirm(`Replace ${existing.length} existing mission(s) with ${_fetchedIssues.length} Jira issue(s)?`);
-      if (ok) store.setMissions([]);
-      else if (ok === false) { /* append */ }
-      else return;
-    }
-    modal.close();
-    _fetchedIssues.forEach(i => store.addMission({ title: i.title, description: i.description, priority: i.priority, owner: i.owner }));
-    render();
-  });
-}
-
 function updateCount() {
   const el = document.getElementById('wl-count');
   if (el) el.textContent = `${store.getMissions().length} mission(s)`;
