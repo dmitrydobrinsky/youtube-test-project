@@ -23,6 +23,7 @@ function render() {
   container.innerHTML = missions.map(m => missionBlock(m)).join('');
   bindEvents();
   renderGauge();
+
 }
 
 function missionEffort(missionId) {

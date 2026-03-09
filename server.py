@@ -16,16 +16,20 @@ SHAPES_API = 'https://api.shapes.co/v1'
 PROXY_PATH = '/api/shapes'
 ASSET_PROXY_PATH = '/api/shapes-asset'
 SHAPES_ASSET_BASE = 'https://api.shapes.co/protected-assets/'
+JIRA_PROXY_PATH = '/api/jira-proxy'
 
 class Handler(http.server.SimpleHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
         # Suppress noisy static-file logs; show only proxy calls
-        if PROXY_PATH in self.path:
+        if PROXY_PATH in self.path or JIRA_PROXY_PATH in self.path:
             print(f'[proxy] {self.path} → {args[1]}')
 
     # ── Proxy POST /api/shapes ────────────────────────────────────────────────
     def do_POST(self):
+        if self.path == JIRA_PROXY_PATH:
+            self._handle_jira_proxy()
+            return
         if self.path != PROXY_PATH:
             self.send_error(404)
             return
@@ -70,6 +74,49 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(json.dumps({'errors': [{'message': str(e)}]}).encode())
+
+    # ── Proxy POST /api/jira-proxy ────────────────────────────────────────────
+    def _handle_jira_proxy(self):
+        length = int(self.headers.get('Content-Length', 0))
+        try:
+            body = json.loads(self.rfile.read(length))
+        except Exception:
+            self.send_error(400, 'Invalid JSON body')
+            return
+
+        url       = body.get('url', '')
+        auth      = body.get('auth', '')
+        fwd_body  = body.get('body', None)  # optional JSON body to forward
+
+        if not url.startswith('https://'):
+            self.send_error(400, 'url must be https')
+            return
+
+        req = urllib.request.Request(
+            url,
+            data=fwd_body.encode() if fwd_body else None,
+            headers={
+                'Authorization': auth,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            method='POST' if fwd_body else 'GET'
+        )
+
+        def _send(status, data):
+            self.send_response(status)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(data if isinstance(data, bytes) else data.encode())
+
+        try:
+            with urllib.request.urlopen(req) as resp:
+                _send(resp.status, resp.read())
+        except urllib.error.HTTPError as e:
+            _send(e.code, e.read())
+        except Exception as e:
+            _send(502, json.dumps({'errorMessages': [str(e)]}))
 
     # ── Proxy GET /api/shapes-asset/{id} → https://api.shapes.co/protected-assets/{id}
     def do_GET(self):
