@@ -4,13 +4,17 @@ import * as store from '../store.js';
 import * as wizard from '../wizard.js';
 import * as modal from '../components/modal.js';
 import { renderByRole } from '../components/capacity-gauge.js';
+import { fetchIssues } from '../utils/jira-adapter.js';
 
 const ROLES = ['Algo', 'Data', 'BI', 'Fullstack', 'DevOps'];
 const TARGETS = ['H1', 'H2', 'Full', 'Stretch'];
 
+const JIRA_DOMAIN = 'onebeat.atlassian.net';
+
 export function init() {
   wizard.registerGuard(4, () => store.getInitiatives().length > 0);
   document.addEventListener('stepchange', e => { if (e.detail.step === 4) render(); });
+  document.getElementById('breakdown-jira-btn')?.addEventListener('click', openJiraImportModal);
 }
 
 // Remember which missions are collapsed across re-renders
@@ -234,6 +238,147 @@ function bindEvents() {
 function renderGauge() {
   const el = document.getElementById('breakdown-gauge');
   if (el) renderByRole(el, store.committedEffortByRole(), store.capacityByRole());
+}
+
+function openJiraImportModal() {
+  const settings = store.getSettings();
+  const quarter = store.getState().meta.quarterLabel || '';
+  const defaultJql = settings.jiraJql ||
+    `project IN (10033) AND type IN (Epic) AND "Quarter[Checkboxes]" In ("${quarter}") ORDER BY Rank ASC`;
+  const missions = store.getMissions();
+
+  if (!settings.jiraEmail || !settings.jiraToken) {
+    modal.open({
+      title: 'Jira not configured',
+      html: `<p style="color:var(--text-muted);font-size:.88rem">
+        Please configure your Jira credentials on the <strong>Setup</strong> screen (step 1) first.
+      </p>
+      <div style="display:flex;justify-content:flex-end;margin-top:1rem">
+        <button class="btn btn-primary" onclick="document.getElementById('modal-close-btn').click()">OK</button>
+      </div>`
+    });
+    return;
+  }
+
+  const missionOpts = missions.map(m =>
+    `<option value="${m.id}">${esc(m.title || '—')}</option>`
+  ).join('');
+
+  modal.open({
+    title: 'Import from Jira',
+    html: `
+      <div style="display:flex;flex-direction:column;gap:.75rem">
+        <div>
+          <label class="form-label">JQL Query</label>
+          <input id="bdj-jql" class="form-input" style="width:100%" value="${esc(defaultJql)}">
+        </div>
+        <div style="display:flex;justify-content:flex-end">
+          <button class="btn btn-ghost" id="bdj-fetch">Fetch Issues</button>
+        </div>
+        <div id="bdj-status" style="min-height:1rem;font-size:.82rem"></div>
+        <div id="bdj-preview" style="display:none">
+          <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:.5rem" id="bdj-count"></div>
+          <div style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">
+            <table style="width:100%;border-collapse:collapse;font-size:.82rem" id="bdj-table">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border);background:var(--surface3)">
+                  <th style="padding:.4rem .6rem;width:28px"><input type="checkbox" id="bdj-check-all" checked></th>
+                  <th style="padding:.4rem .6rem;text-align:left">Epic</th>
+                  <th style="padding:.4rem .6rem;text-align:left;width:180px">Mission</th>
+                </tr>
+              </thead>
+              <tbody id="bdj-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:.25rem">
+          <button class="btn btn-ghost" id="bdj-cancel">Cancel</button>
+          <button class="btn btn-primary" id="bdj-import" style="display:none">Import Selected</button>
+        </div>
+      </div>`
+  });
+
+  let _fetched = [];
+
+  document.getElementById('bdj-cancel').addEventListener('click', () => modal.close());
+
+  document.getElementById('bdj-check-all').addEventListener('change', e => {
+    document.querySelectorAll('.bdj-row-check').forEach(cb => { cb.checked = e.target.checked; });
+  });
+
+  document.getElementById('bdj-fetch').addEventListener('click', async () => {
+    const jql = document.getElementById('bdj-jql').value.trim();
+    const statusEl = document.getElementById('bdj-status');
+    const fetchBtn = document.getElementById('bdj-fetch');
+    if (!jql) return;
+
+    fetchBtn.disabled = true; fetchBtn.textContent = 'Fetching…';
+    statusEl.style.color = 'var(--text-muted)'; statusEl.textContent = 'Connecting to Jira…';
+    document.getElementById('bdj-preview').style.display = 'none';
+    document.getElementById('bdj-import').style.display = 'none';
+
+    try {
+      _fetched = await fetchIssues({ domain: JIRA_DOMAIN, email: settings.jiraEmail, token: settings.jiraToken, jql });
+      store.updateSettings({ jiraJql: jql });
+
+      if (!_fetched.length) {
+        statusEl.style.color = 'var(--yellow)'; statusEl.textContent = 'No issues found.';
+      } else {
+        statusEl.textContent = '';
+        document.getElementById('bdj-count').textContent =
+          `${_fetched.length} issue${_fetched.length !== 1 ? 's' : ''} found — select a mission for each`;
+        document.getElementById('bdj-tbody').innerHTML = _fetched.map((issue, i) => `
+          <tr style="border-bottom:1px solid var(--border-subtle)" data-idx="${i}">
+            <td style="padding:.35rem .6rem"><input type="checkbox" class="bdj-row-check" checked></td>
+            <td style="padding:.35rem .6rem">
+              <span style="color:var(--text-muted);margin-right:.4rem;font-size:.75rem">${esc(issue.key)}</span>
+              ${esc(issue.title)}
+              ${issue.description ? `<div style="color:var(--text-muted);font-size:.74rem;margin-top:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px">${esc(issue.description)}</div>` : ''}
+            </td>
+            <td style="padding:.35rem .6rem">
+              <select class="tbl-input tbl-select bdj-mission-select" style="width:100%;font-size:.78rem">
+                <option value="">— unassigned —</option>
+                ${missionOpts}
+              </select>
+            </td>
+          </tr>`).join('');
+        document.getElementById('bdj-preview').style.display = 'block';
+        document.getElementById('bdj-import').style.display = '';
+      }
+    } catch (err) {
+      statusEl.style.color = 'var(--red)'; statusEl.textContent = err.message;
+    } finally {
+      fetchBtn.disabled = false; fetchBtn.textContent = 'Fetch Issues';
+    }
+  });
+
+  document.getElementById('bdj-import').addEventListener('click', () => {
+    const rows = document.querySelectorAll('#bdj-tbody tr');
+    let added = 0;
+    rows.forEach(row => {
+      const checked = row.querySelector('.bdj-row-check')?.checked;
+      if (!checked) return;
+      const idx = parseInt(row.dataset.idx, 10);
+      const missionId = row.querySelector('.bdj-mission-select')?.value || '';
+      const issue = _fetched[idx];
+      if (!issue) return;
+      store.addInitiative({
+        missionId,
+        title: issue.title,
+        notes: issue.description || ''
+      });
+      added++;
+    });
+    modal.close();
+    render();
+    if (added) {
+      const missionId = document.querySelector('#bdj-tbody .bdj-mission-select')?.value;
+      if (missionId) {
+        const list = document.getElementById(`inits-${missionId}`);
+        if (list) list.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  });
 }
 
 function esc(s) {
