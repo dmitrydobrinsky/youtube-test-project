@@ -21,7 +21,7 @@ export async function fetchIssues({ domain, email, token, jql, maxResults = 100 
     body: JSON.stringify({
       url,
       auth: `Basic ${auth}`,
-      body: JSON.stringify({ jql, maxResults, fields: ['summary', 'description', 'priority', 'assignee'] })
+      body: JSON.stringify({ jql, maxResults, fields: ['summary', 'description', 'priority', 'assignee', 'components'] })
     })
   });
 
@@ -37,7 +37,8 @@ export async function fetchIssues({ domain, email, token, jql, maxResults = 100 
     title: issue.fields.summary || '',
     description: _adfToText(issue.fields.description),
     priority: _mapPriority(issue.fields.priority?.name),
-    owner: issue.fields.assignee?.displayName || ''
+    owner: issue.fields.assignee?.displayName || '',
+    components: (issue.fields.components || []).map(c => c.name).join(', ')
   }));
 }
 

@@ -333,7 +333,10 @@ function openJiraImportModal() {
             <td style="padding:.35rem .6rem">
               <span style="color:var(--text-muted);margin-right:.4rem;font-size:.75rem">${esc(issue.key)}</span>
               ${esc(issue.title)}
-              ${issue.description ? `<div style="color:var(--text-muted);font-size:.74rem;margin-top:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px">${esc(issue.description)}</div>` : ''}
+              <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.25rem">
+                ${issue.owner ? `<span style="font-size:.73rem;color:var(--text-soft)">👤 ${esc(issue.owner)}</span>` : ''}
+                ${issue.components ? `<span style="font-size:.73rem;color:var(--text-soft)">🏷 ${esc(issue.components)}</span>` : ''}
+              </div>
             </td>
             <td style="padding:.35rem .6rem">
               <select class="tbl-input tbl-select bdj-mission-select" style="width:100%;font-size:.78rem">
