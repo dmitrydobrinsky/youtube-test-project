@@ -2,6 +2,23 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Running Tests
+
+Requires Node.js (v18+). Install from https://nodejs.org or via `nvm`.
+
+```bash
+npm install          # install Vitest + Playwright (first time only)
+
+npm test             # unit tests (Vitest)
+npm run test:watch   # unit tests in watch mode
+npm run test:e2e     # E2E tests (Playwright) — requires the dev server running
+npm run test:all     # unit + E2E
+npm run coverage     # unit tests with coverage report
+```
+
+Unit tests live in `tests/unit/`, E2E tests in `tests/e2e/`.
+When adding features, write unit tests in the matching `tests/unit/` file and add E2E cases to `tests/e2e/wizard.spec.js` for user-facing flows.
+
 ## Running the App
 
 ```bash
