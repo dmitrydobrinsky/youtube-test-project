@@ -102,9 +102,9 @@ describe('team', () => {
   });
 
   it('calculates total capacity', () => {
-    store.addTeamMember({ name: 'A', personDays: 65 });
-    store.addTeamMember({ name: 'B', personDays: 50 });
-    expect(store.totalCapacity()).toBe(115);
+    store.addTeamMember({ name: 'A', capacityPct: 100, availableWeeks: 13 }); // 65
+    store.addTeamMember({ name: 'B', capacityPct: 50,  availableWeeks: 10 }); // 25
+    expect(store.totalCapacity()).toBe(90);
   });
 
   it('calculates capacity by role', () => {
