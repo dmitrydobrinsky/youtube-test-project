@@ -5,6 +5,7 @@ import * as modal from './modal.js';
 const APP_FIELDS = [
   { key: 'title',       label: 'Mission Title', required: true },
   { key: 'description', label: 'Description',   required: false },
+  { key: 'why',         label: 'Why',           required: false },
   { key: 'owner',       label: 'Owner',         required: false },
   { key: 'priority',    label: 'Priority',      required: false }
 ];
@@ -14,8 +15,9 @@ export function autoMap(headers) {
   const map = {};
   APP_FIELDS.forEach(f => {
     const aliases = {
-      title:       ['title','mission','name','task','item','feature'],
+      title:       ['title','mission','name','task','item','feature','initiative'],
       description: ['description','desc','details','notes','summary'],
+      why:         ['why','reason','rationale','motivation','justification'],
       owner:       ['owner','assignee','assigned to','pm','responsible'],
       priority:    ['priority','prio','importance','rank','level']
     };
@@ -69,10 +71,8 @@ export function openMapper(headers) {
 
     document.getElementById('mapper-ok').addEventListener('click', () => {
       const result = {};
-      document.querySelectorAll('[data-field]').forEach(sel => {
-        if (sel.value && sel.value !== '-- skip --') {
-          result[sel.dataset.field] = sel.value;
-        }
+      document.querySelectorAll('select[data-field]').forEach(sel => {
+        if (sel.value && sel.value !== '-- skip --') result[sel.dataset.field] = sel.value;
       });
       modal.close(result);
     });

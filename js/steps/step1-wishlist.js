@@ -32,7 +32,8 @@ function rowHTML(m) {
     <tr data-id="${m.id}">
       <td class="drag-handle" title="Drag to reorder">⠿</td>
       <td><input class="tbl-input" data-field="title" value="${esc(m.title)}"></td>
-      <td><input class="tbl-input" data-field="description" value="${esc(m.description)}"></td>
+      <td><input class="tbl-input" data-field="description" value="${esc(m.description)}" title="${esc(m.description)}"></td>
+      <td><input class="tbl-input" data-field="why" value="${esc(m.why)}" title="${esc(m.why)}"></td>
       <td>
         <button class="icon-btn del-btn" title="Delete">🗑</button>
       </td>
@@ -98,6 +99,19 @@ function bindEvents() {
     });
   });
 
+  // Export CSV
+  document.getElementById('wl-export-csv').addEventListener('click', () => {
+    const missions = store.getMissions();
+    if (!missions.length) return;
+    const rows = [['Initiative', 'Description', 'Why'], ...missions.map(m => [m.title, m.description, m.why])];
+    const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = 'wish-list.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
   // Delete all
   document.getElementById('wl-clear-btn').addEventListener('click', async () => {
     const count = store.getMissions().length;
@@ -139,6 +153,7 @@ function bindRowEvents() {
         const row = e.target.closest('tr');
         const id = row.dataset.id;
         store.updateMission(id, { [e.target.dataset.field]: e.target.value });
+        e.target.title = e.target.value;
         updateCount();
       });
     }
@@ -175,13 +190,8 @@ async function handleFile(file) {
     const { rows, headers } = await sheet.parseFile(file, hasHeader);
     if (!rows.length) { alert('No data found in file.'); return; }
 
-    const autoMapped = autoMap(headers);
-    // If title column is not obvious, open mapper
-    let mapping = autoMapped;
-    if (!autoMapped.title) {
-      mapping = await openMapper(headers);
-      if (!mapping) return; // cancelled
-    }
+    const mapping = await openMapper(headers);
+    if (!mapping) return; // cancelled
 
     const missions = applyMapping(rows, mapping);
     if (!missions.length) { alert('No valid missions found. Make sure there is a Title/Mission column.'); return; }

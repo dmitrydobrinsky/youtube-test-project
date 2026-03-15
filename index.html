@@ -99,7 +99,9 @@
           <input id="start-shapes-access" class="form-input" type="password"
             style="font-family:monospace;font-size:.75rem" placeholder="eyJ…">
         </div>
-        <div style="margin-top:.75rem;display:flex;justify-content:flex-end">
+        <div id="start-shapes-status" style="min-height:1.1rem;font-size:.82rem;margin-top:.5rem"></div>
+        <div style="margin-top:.5rem;display:flex;gap:.5rem;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" id="start-shapes-test">Test Connection</button>
           <button class="btn btn-primary btn-sm" id="start-shapes-save">Save</button>
         </div>
       </div>
@@ -134,6 +136,25 @@
         </div>
       </div>
 
+      <!-- Holidays by Country card -->
+      <div class="connection-card">
+        <div class="connection-card-header">
+          <span class="connection-icon">🗓️</span>
+          <div>
+            <div class="connection-name">Holidays by Country</div>
+            <div class="connection-desc">Set public holidays per country for the quarter</div>
+          </div>
+        </div>
+        <div id="start-holidays-list" style="margin-top:.5rem">
+          <p style="color:var(--text-muted);font-size:.85rem;margin:0">Load employees from Shapes to configure holidays per country.</p>
+        </div>
+        <div id="start-holidays-status" style="min-height:1.1rem;font-size:.82rem;margin-top:.5rem"></div>
+        <div style="margin-top:.5rem;display:flex;gap:.5rem;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" id="start-holidays-load">Load from Shapes</button>
+          <button class="btn btn-primary btn-sm" id="start-holidays-save" style="display:none">Save &amp; Apply to Team</button>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -149,6 +170,7 @@
       </label>
       <button class="btn btn-ghost" id="wl-upload-btn">⬆ Upload CSV / Excel</button>
       <button class="btn btn-ghost" id="wl-drive-btn">☁ Google Drive</button>
+      <button class="btn btn-ghost" id="wl-export-csv">⬇ Export CSV</button>
       <button class="btn btn-danger" id="wl-clear-btn">Delete All</button>
       <button class="btn btn-primary" id="wl-add-row">+ Add Row</button>
       <input type="file" id="wl-file-input" accept=".csv,.xls,.xlsx" style="display:none">
@@ -166,6 +188,7 @@
             <th style="width:28px"></th>
             <th>Initiative</th>
             <th>Description</th>
+            <th>Why</th>
             <th style="width:40px"></th>
           </tr>
         </thead>

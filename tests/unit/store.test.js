@@ -242,4 +242,66 @@ describe('settings', () => {
     expect(store.getSettings().jiraEmail).toBe('a@b.com');
     expect(store.getSettings().jiraToken).toBe('tok123');
   });
+
+  it('stores countryHolidays map', () => {
+    store.updateSettings({ countryHolidays: { Israel: 5, USA: 3 } });
+    expect(store.getSettings().countryHolidays).toEqual({ Israel: 5, USA: 3 });
+  });
+
+  it('merges countryHolidays without losing other settings', () => {
+    store.updateSettings({ jiraEmail: 'a@b.com' });
+    store.updateSettings({ countryHolidays: { Israel: 5 } });
+    expect(store.getSettings().jiraEmail).toBe('a@b.com');
+    expect(store.getSettings().countryHolidays).toEqual({ Israel: 5 });
+  });
+});
+
+// ── Mission why field ─────────────────────────────────────────────────────────
+
+describe('mission why field', () => {
+  it('stores why on addMission', () => {
+    const m = store.addMission({ title: 'T', why: 'Because reasons' });
+    expect(m.why).toBe('Because reasons');
+  });
+
+  it('defaults why to empty string', () => {
+    const m = store.addMission({ title: 'T' });
+    expect(m.why).toBe('');
+  });
+
+  it('updates why via updateMission', () => {
+    const m = store.addMission({ title: 'T' });
+    store.updateMission(m.id, { why: 'New reason' });
+    expect(store.getMissions()[0].why).toBe('New reason');
+  });
+
+  it('persists why to localStorage', () => {
+    store.addMission({ title: 'T', why: 'Saved reason' });
+    const raw = JSON.parse(localStorage.getItem('qp_state_v1'));
+    expect(raw.missions[0].why).toBe('Saved reason');
+  });
+});
+
+// ── Country holidays applied to team ─────────────────────────────────────────
+
+describe('countryHolidays applied to team', () => {
+  it('updateTeamMember sets holidayDays', () => {
+    const m = store.addTeamMember({ name: 'Alice', country: 'Israel' });
+    store.updateTeamMember(m.id, { holidayDays: 5 });
+    expect(store.getTeam()[0].holidayDays).toBe(5);
+  });
+
+  it('applying country holidays updates correct members', () => {
+    const alice = store.addTeamMember({ name: 'Alice', country: 'Israel' });
+    const bob   = store.addTeamMember({ name: 'Bob',   country: 'USA' });
+    const countryHolidays = { Israel: 7, USA: 3 };
+    store.getTeam().forEach(member => {
+      const key = Object.keys(countryHolidays).find(
+        c => c.toLowerCase() === (member.country || '').toLowerCase()
+      );
+      if (key !== undefined) store.updateTeamMember(member.id, { holidayDays: countryHolidays[key] });
+    });
+    expect(store.getTeam().find(m => m.id === alice.id).holidayDays).toBe(7);
+    expect(store.getTeam().find(m => m.id === bob.id).holidayDays).toBe(3);
+  });
 });

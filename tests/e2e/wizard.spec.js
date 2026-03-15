@@ -83,3 +83,72 @@ test('quarter label appears in header after selection', async ({ page }) => {
   // Header should show the selected quarter
   await expect(page.locator('#quarter-label')).toContainText(label.trim());
 });
+
+// ── Setup screen connection cards ─────────────────────────────────────────────
+
+test('Shapes card has Test Connection button', async ({ page }) => {
+  await expect(page.locator('#start-shapes-test')).toBeVisible();
+  await expect(page.locator('#start-shapes-test')).toHaveText('Test Connection');
+});
+
+test('Shapes card shows error when testing with no token', async ({ page }) => {
+  await page.locator('#start-shapes-test').click();
+  await expect(page.locator('#start-shapes-status')).toContainText('Enter a refresh or access token first');
+});
+
+test('Jira card has Test Connection button', async ({ page }) => {
+  await expect(page.locator('#start-jira-test')).toBeVisible();
+});
+
+test('Holidays card is present with Load from Shapes button', async ({ page }) => {
+  await expect(page.locator('#start-holidays-load')).toBeVisible();
+  await expect(page.locator('#start-holidays-load')).toHaveText('Load from Shapes');
+});
+
+test('Holidays card Save button is hidden until countries are loaded', async ({ page }) => {
+  await expect(page.locator('#start-holidays-save')).toBeHidden();
+});
+
+test('Holidays card shows error when loading without Shapes token', async ({ page }) => {
+  await page.locator('#start-holidays-load').click();
+  await expect(page.locator('#start-holidays-status')).toContainText('Connect Shapes first');
+});
+
+// ── Wish List screen ──────────────────────────────────────────────────────────
+
+test('Wish List has Why column header', async ({ page }) => {
+  // Navigate to Wish List (step 3) — need to pass Team Setup guard first
+  await page.evaluate(() => {
+    const state = JSON.parse(localStorage.getItem('qp_state_v1') || '{}');
+    state.team = [{ id: 't1', name: 'Alice', role: 'Algo', capacityPct: 100, availableWeeks: 13, personDays: 65 }];
+    state.meta = { ...(state.meta || {}), currentStep: 3 };
+    localStorage.setItem('qp_state_v1', JSON.stringify(state));
+  });
+  await page.reload();
+  const headers = page.locator('#step-3 .data-table th');
+  const texts = await headers.allTextContents();
+  expect(texts).toContain('Why');
+});
+
+test('Wish List has Export CSV button', async ({ page }) => {
+  await page.evaluate(() => {
+    const state = JSON.parse(localStorage.getItem('qp_state_v1') || '{}');
+    state.meta = { ...(state.meta || {}), currentStep: 3 };
+    localStorage.setItem('qp_state_v1', JSON.stringify(state));
+  });
+  await page.reload();
+  await expect(page.locator('#wl-export-csv')).toBeVisible();
+  await expect(page.locator('#wl-export-csv')).toContainText('Export CSV');
+});
+
+test('Wish List Add Row creates row with Why input', async ({ page }) => {
+  await page.evaluate(() => {
+    const state = JSON.parse(localStorage.getItem('qp_state_v1') || '{}');
+    state.meta = { ...(state.meta || {}), currentStep: 3 };
+    localStorage.setItem('qp_state_v1', JSON.stringify(state));
+  });
+  await page.reload();
+  await page.locator('#wl-add-row').click();
+  const row = page.locator('#wl-tbody tr').first();
+  await expect(row.locator('input[data-field="why"]')).toBeVisible();
+});

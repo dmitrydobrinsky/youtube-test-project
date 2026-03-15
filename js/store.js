@@ -23,7 +23,8 @@ const DEFAULT_STATE = {
       effortComplexity: 0.15
     },
     missionColors: {},
-    googleClientId: ''
+    googleClientId: '',
+    countryHolidays: {}
   }
 };
 
@@ -88,6 +89,7 @@ function addMission(data = {}) {
     id: shortId(),
     title: data.title || '',
     description: data.description || '',
+    why: data.why || '',
     owner: data.owner || '',
     ownerId: data.ownerId || '',
     priority: data.priority || ''
